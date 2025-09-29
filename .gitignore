@@ -1,0 +1,38 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+frontend/.env*
+backend/.env*
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+frontend/.DS_Store
+backend/.DS_Store
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+*.pyo
+
+# Build outputs
+frontend/dist/
+frontend/build/
+backend/.aws-sam/
+backend/samconfig.toml
+
+# IDE
+.vscode/
+frontend/.vscode/
+backend/.vscode/
+
+# Logs
+*.log
+frontend/*.log
+backend/*.log
