@@ -1,0 +1,211 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Data Banana serverless backend
+
+Globals:
+  Function:
+    Timeout: 15
+    Runtime: python3.11
+    MemorySize: 256
+    Environment:
+      Variables:
+        DB_HOST: !Ref DatabaseHost
+        DB_NAME: databanana
+        DB_USER: !Ref DatabaseUser
+        DB_PASSWORD: !Ref DatabasePassword
+        STRIPE_SECRET: !Ref StripeSecret
+        S3_BUCKET: !Ref ImageBucket
+        ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+        NANO_BANANA_API_KEY: !Ref NanoBananaApiKey
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,OPTIONS'"
+      AllowHeaders: "'Content-Type,Authorization'"
+      AllowOrigin: "'*'"
+
+Parameters:
+  DatabaseHost:
+    Type: String
+    Description: PostgreSQL database host
+  DatabaseUser:
+    Type: String
+    Description: Database username
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    Description: Database password
+  StripeSecret:
+    Type: String
+    NoEcho: true
+    Description: Stripe secret key
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+    Description: Anthropic Claude API key
+  NanoBananaApiKey:
+    Type: String
+    NoEcho: true
+    Description: Nano Banana API key
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-users"
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: false
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub "${AWS::StackName}-client"
+      GenerateSecret: false
+
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-images"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ["*"]
+            AllowedMethods: [GET, PUT, POST, DELETE]
+            AllowedOrigins: ["*"]
+
+  # Database Lambda Functions
+  UserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: user.handler
+      Events:
+        GetUser:
+          Type: Api
+          Properties:
+            Path: /user
+            Method: get
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+        UpdateCredits:
+          Type: Api
+          Properties:
+            Path: /user/credits
+            Method: post
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+
+  BatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: batch.handler
+      Events:
+        GetBatches:
+          Type: Api
+          Properties:
+            Path: /batches
+            Method: get
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+        CreateBatch:
+          Type: Api
+          Properties:
+            Path: /batches
+            Method: post
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+
+  ImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: image.handler
+      Events:
+        GetImages:
+          Type: Api
+          Properties:
+            Path: /images
+            Method: get
+        UpdateImage:
+          Type: Api
+          Properties:
+            Path: /images/{id}
+            Method: put
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+
+  GenerateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: generate.handler
+      Timeout: 60
+      MemorySize: 512
+      Events:
+        Generate:
+          Type: Api
+          Properties:
+            Path: /generate
+            Method: post
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+
+  PaymentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: payment.handler
+      Events:
+        Payment:
+          Type: Api
+          Properties:
+            Path: /payment
+            Method: post
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+
+  UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: upload.handler
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ImageBucket
+      Events:
+        Upload:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: post
+            Auth:
+              Authorizer: 
+                UserPoolArn: !GetAtt UserPool.Arn
+
+
+Outputs:
+  ApiGatewayApi:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  
+  UserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref UserPool
+    
+  UserPoolClientId:
+    Description: "Cognito User Pool Client ID"  
+    Value: !Ref UserPoolClient
