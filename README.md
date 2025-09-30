@@ -4,20 +4,27 @@ Generate realistic image datasets for ML training with AWS Cognito authenticatio
 
 ## Quick Start
 
-### Backend (Python Lambda)
+### 1. Backend (Python Lambda)
 ```bash
 cd backend
 ./deploy.sh
 # Copy output values to frontend/src/config.js
 ```
 
-### Frontend (React PWA)
+### 2. Frontend (React PWA)
 ```bash
 cd frontend
 npm install
 # Update src/config.js with SAM output values
 npm run dev
 ```
+
+### 3. Production Hosting (AWS Amplify)
+1. Push code to GitHub/GitLab
+2. Go to [AWS Amplify Console](https://console.aws.amazon.com/amplify/)
+3. **Connect repository** → Select your repo
+4. **Build settings** → Use existing `amplify.yml`
+5. **Deploy** → Automatic builds on every push
 
 ## Architecture
 
