@@ -120,3 +120,15 @@
 .grid-2 {
   @include grid;
 }
+
+// Test mode badge
+.test-badge {
+  background: var(--error);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-semibold);
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-sm);
+  letter-spacing: 0.05em;
+}
