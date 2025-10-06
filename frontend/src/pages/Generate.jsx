@@ -9,9 +9,10 @@ function Generate() {
   const [userCredits, setUserCredits] = useState(0)
   const [batches, setBatches] = useState([]) // All generated batches
   const [selectedImages, setSelectedImages] = useState(new Set()) // Selected image IDs across all batches
-  const [zoomedImage, setZoomedImage] = useState(null) // Currently zoomed image
-  const [zoomLevel, setZoomLevel] = useState(2) // Zoom level (2x, 3x, 4x)
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 }) // Pan position
+  const [rejectedImages, setRejectedImages] = useState(new Set()) // Rejected image IDs
+  const [viewedImage, setViewedImage] = useState(null) // Currently viewed image
+  const [zoomLevel, setZoomLevel] = useState(2)
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const { user } = useAuth()
@@ -115,6 +116,10 @@ function Generate() {
     return batchImages.filter(img => selectedImages.has(img.id)).length
   }
 
+  const getRejectedCountForBatch = (batchImages) => {
+    return batchImages.filter(img => rejectedImages.has(img.id)).length
+  }
+
   const handleExport = async () => {
     if (selectedImages.size === 0) {
       alert('Please select at least one image to export')
@@ -125,15 +130,60 @@ function Generate() {
     alert(`🎉 Mock Export Success!\n\n${selectedImages.size} images exported as COCO dataset.\nDownload link: https://example.com/dataset.zip`)
   }
 
-  const openZoom = (image) => {
-    setZoomedImage(image)
+  const openImageModal = (image) => {
+    setViewedImage(image)
     setZoomLevel(2)
     setPanPosition({ x: 0, y: 0 })
   }
 
-  const closeZoom = () => {
-    setZoomedImage(null)
+  const closeImageModal = () => {
+    setViewedImage(null)
     setIsDragging(false)
+  }
+
+  const getAllImages = () => {
+    return batches.flatMap(batch => batch.images)
+  }
+
+  const getCurrentImageIndex = () => {
+    if (!viewedImage) return -1
+    const allImages = getAllImages()
+    return allImages.findIndex(img => img.id === viewedImage.id)
+  }
+
+  const goToNextImage = () => {
+    const allImages = getAllImages()
+    const currentIndex = getCurrentImageIndex()
+    if (currentIndex < allImages.length - 1) {
+      const nextImage = allImages[currentIndex + 1]
+      setViewedImage(nextImage)
+      setZoomLevel(2)
+      setPanPosition({ x: 0, y: 0 })
+    } else {
+      closeImageModal() // Close if last image
+    }
+  }
+
+  const handleAccept = () => {
+    // Add to selected, remove from rejected
+    if (!selectedImages.has(viewedImage.id)) {
+      toggleImageSelection(viewedImage.id)
+    }
+    setRejectedImages(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(viewedImage.id)
+      return newSet
+    })
+    setTimeout(goToNextImage, 300)
+  }
+
+  const handleReject = () => {
+    // Remove from selected, add to rejected
+    if (selectedImages.has(viewedImage.id)) {
+      toggleImageSelection(viewedImage.id)
+    }
+    setRejectedImages(prev => new Set(prev).add(viewedImage.id))
+    setTimeout(goToNextImage, 300)
   }
 
   const handleMouseDown = (e) => {
@@ -156,7 +206,7 @@ function Generate() {
   const handleWheel = (e) => {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -0.5 : 0.5
-    setZoomLevel(prev => Math.max(1, Math.min(5, prev + delta)))
+    setZoomLevel(prev => Math.max(1, Math.min(4, prev + delta)))
   }
 
   return (
@@ -261,7 +311,9 @@ function Generate() {
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span>{getSelectedCountForBatch(batch.images)}/{batch.images.length} selected</span>
+              <span style={{ color: 'var(--success)' }}>✓{getSelectedCountForBatch(batch.images)}</span>
+              <span style={{ color: 'var(--error)' }}>✗{getRejectedCountForBatch(batch.images)}</span>
+              <span>/{batch.images.length}</span>
               <span>${batch.cost.toFixed(2)}</span>
               <span>{batch.isOpen ? '▼' : '▶'}</span>
             </div>
@@ -276,86 +328,30 @@ function Generate() {
                   className="card"
                   style={{ 
                     padding: '0.5rem',
-                    border: selectedImages.has(image.id) ? '3px solid var(--success)' : '2px solid var(--border-light)',
+                    border: selectedImages.has(image.id) 
+                      ? '3px solid var(--success)' 
+                      : rejectedImages.has(image.id)
+                      ? '3px solid var(--error)'
+                      : '2px solid var(--border-light)',
                     transform: selectedImages.has(image.id) ? 'scale(0.98)' : 'scale(1)',
                     transition: 'all 0.2s ease',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    opacity: rejectedImages.has(image.id) ? 0.6 : 1
                   }}
                 >
-                  <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-md)' }}>
-                    <img 
-                      src={image.url} 
-                      alt={image.prompt}
-                      style={{ 
-                        width: '100%', 
-                        height: '200px', 
-                        objectFit: 'cover', 
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'zoom-in',
-                        transition: 'transform 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'scale(1.5)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'scale(1)'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openZoom(image)
-                      }}
-                    />
-                    
-                    {/* Selection checkbox */}
-                    <div 
-                      style={{
-                        position: 'absolute',
-                        top: '0.5rem',
-                        right: '0.5rem',
-                        background: selectedImages.has(image.id) ? 'var(--success)' : 'rgba(0,0,0,0.7)',
-                        border: '2px solid white',
-                        borderRadius: '50%',
-                        width: '28px',
-                        height: '28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        color: 'white',
-                        zIndex: 2,
-                        transition: 'all 0.2s ease'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleImageSelection(image.id)
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'scale(1.1)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'scale(1)'
-                      }}
-                    >
-                      {selectedImages.has(image.id) ? '✓' : '+'}
-                    </div>
-                    
-                    {/* Zoom instruction overlay */}
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '0.5rem',
-                      left: '0.5rem',
-                      background: 'rgba(0,0,0,0.7)',
-                      color: 'white',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.7rem',
-                      opacity: '0.8'
-                    }}>
-                      🔍 Hover • Click for details
-                    </div>
-                  </div>
+                  <img 
+                    src={image.url} 
+                    alt={image.prompt}
+                    style={{ 
+                      width: '100%', 
+                      height: '200px', 
+                      objectFit: 'cover', 
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => openImageModal(image)}
+                  />
                   
                   <div style={{ padding: '0.5rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     {image.prompt.slice(0, 60)}{image.prompt.length > 60 ? '...' : ''}
@@ -375,8 +371,8 @@ function Generate() {
         </div>
       )}
 
-      {/* Zoom Modal */}
-      {zoomedImage && (
+      {/* Inspection Modal */}
+      {viewedImage && (
         <div 
           style={{
             position: 'fixed',
@@ -388,28 +384,30 @@ function Generate() {
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            cursor: isDragging ? 'grabbing' : 'grab'
+            justifyContent: 'center'
           }}
-          onClick={closeZoom}
+          onClick={closeImageModal}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onWheel={handleWheel}
         >
-          {/* Controls */}
+          {/* Top Controls */}
           <div style={{
             position: 'absolute',
             top: '1rem',
-            left: '1rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
             display: 'flex',
             gap: '1rem',
             alignItems: 'center',
-            background: 'rgba(0,0,0,0.7)',
-            padding: '0.5rem 1rem',
-            borderRadius: 'var(--radius-md)',
+            background: 'rgba(0,0,0,0.8)',
+            padding: '0.75rem 1.5rem',
+            borderRadius: 'var(--radius-lg)',
             color: 'white',
-            fontSize: '0.9rem'
+            zIndex: 2
           }}>
+            <span>{getCurrentImageIndex() + 1} / {getAllImages().length}</span>
+            <div style={{ width: '1px', height: '20px', background: 'white', opacity: '0.3' }}></div>
             <span>Zoom: {zoomLevel.toFixed(1)}x</span>
             <button 
               onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(1, prev - 0.5)) }}
@@ -418,7 +416,7 @@ function Generate() {
               -
             </button>
             <button 
-              onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(5, prev + 0.5)) }}
+              onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(4, prev + 0.5)) }}
               style={{ background: 'none', border: '1px solid white', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}
             >
               +
@@ -427,48 +425,33 @@ function Generate() {
 
           {/* Close button */}
           <button 
-            onClick={closeZoom}
+            onClick={closeImageModal}
             style={{
               position: 'absolute',
               top: '1rem',
               right: '1rem',
-              background: 'rgba(0,0,0,0.7)',
+              background: 'rgba(0,0,0,0.8)',
               border: '1px solid white',
               color: 'white',
-              padding: '0.5rem 1rem',
-              borderRadius: 'var(--radius-md)',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
               cursor: 'pointer',
-              fontSize: '1rem'
+              fontSize: '1.2rem',
+              zIndex: 2
             }}
           >
-            ✕ Close
+            ✕
           </button>
 
-          {/* Instructions */}
-          <div style={{
-            position: 'absolute',
-            bottom: '1rem',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.7)',
-            padding: '0.5rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            color: 'white',
-            fontSize: '0.85rem',
-            textAlign: 'center'
-          }}>
-            🖱️ Drag to pan • 🖲️ Scroll to zoom • Click outside to close
-          </div>
-
-          {/* Image */}
+          {/* Zoomable Image */}
           <img 
-            src={zoomedImage.url}
-            alt={zoomedImage.prompt}
+            src={viewedImage.url}
+            alt={viewedImage.prompt}
             style={{
-              maxWidth: 'none',
-              maxHeight: 'none',
-              width: 'auto',
-              height: 'auto',
+              maxWidth: '90vw',
+              maxHeight: '80vh',
+              objectFit: 'contain',
               transform: `scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
               transition: isDragging ? 'none' : 'transform 0.1s ease',
               cursor: isDragging ? 'grabbing' : 'grab'
@@ -478,28 +461,67 @@ function Generate() {
             draggable={false}
           />
 
-          {/* Selection toggle in zoom view */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              toggleImageSelection(zoomedImage.id)
-            }}
-            style={{
-              position: 'absolute',
-              top: '1rem',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: selectedImages.has(zoomedImage.id) ? 'var(--success)' : 'rgba(0,0,0,0.7)',
-              border: '1px solid white',
-              color: 'white',
-              padding: '0.5rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              cursor: 'pointer',
-              fontSize: '0.9rem'
-            }}
-          >
-            {selectedImages.has(zoomedImage.id) ? '✓ Selected' : 'Select for dataset'}
-          </button>
+          {/* Bottom Controls */}
+          <div style={{
+            position: 'absolute',
+            bottom: '1rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '1rem',
+            zIndex: 2
+          }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleReject() }}
+              style={{
+                padding: '1rem 2rem',
+                background: 'var(--error)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-lg)',
+                cursor: 'pointer',
+                fontSize: '1.1rem',
+                fontWeight: 'var(--font-weight-semibold)',
+                minWidth: '120px'
+              }}
+            >
+              ✗ Reject
+            </button>
+            
+            <button
+              onClick={(e) => { e.stopPropagation(); handleAccept() }}
+              style={{
+                padding: '1rem 2rem',
+                background: 'var(--success)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-lg)',
+                cursor: 'pointer',
+                fontSize: '1.1rem',
+                fontWeight: 'var(--font-weight-semibold)',
+                minWidth: '120px'
+              }}
+            >
+              ✓ Accept
+            </button>
+          </div>
+
+          {/* Instructions */}
+          <div style={{
+            position: 'absolute',
+            bottom: '6rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.8)',
+            padding: '0.5rem 1rem',
+            borderRadius: 'var(--radius-md)',
+            color: 'white',
+            fontSize: '0.85rem',
+            textAlign: 'center',
+            opacity: '0.8'
+          }}>
+            🖱️ Drag to pan • 🖲️ Scroll to zoom • Accept/Reject auto-advances
+          </div>
         </div>
       )}
     </div>
