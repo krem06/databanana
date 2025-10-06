@@ -19,18 +19,43 @@ def handler(event, context):
         body = json.loads(event['body'])
         context_text = body['context']
         exclude_tags = body.get('exclude_tags', '')
+        image_count = body.get('image_count', 10)
         cognito_user_id = get_cognito_user_id(event)
+        
+        # Validate image count
+        if not isinstance(image_count, int) or image_count < 1 or image_count > 100:
+            return {'statusCode': 400, 'body': json.dumps({'error': 'Image count must be between 1 and 100'})}
+        
+        # Check user credits
+        cost = image_count * 0.05  # $0.05 per image
+        user_db_id = get_user_db_id(cognito_user_id)
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT credits FROM users WHERE id = %s', (user_db_id,))
+        user_credits = cur.fetchone()[0]
+        
+        if user_credits < cost:
+            return {'statusCode': 400, 'body': json.dumps({
+                'error': f'Insufficient credits. Need ${cost:.2f} but you have ${user_credits:.2f}'
+            })}
+        
+        # Deduct credits first
+        cur.execute('UPDATE users SET credits = credits - %s WHERE id = %s', (cost, user_db_id))
+        conn.commit()
         
         # Generate variations and real images
         variations = generate_variations(context_text, exclude_tags)
-        images = generate_images_with_gemini(variations[:10], cognito_user_id)  # Only 10 for demo
+        images = generate_images_with_gemini(variations[:image_count], cognito_user_id)
         
         # Save batch
-        batch_id = save_batch(cognito_user_id, context_text, images)
+        batch_id = save_batch(cognito_user_id, context_text, images, cost)
         
         return {'statusCode': 200, 'body': json.dumps({
             'batch_id': batch_id,
-            'images': images
+            'images': images,
+            'cost': cost,
+            'remaining_credits': user_credits - cost
         })}
         
     except Exception as e:
@@ -122,14 +147,14 @@ def generate_images_with_gemini(variations, cognito_user_id):
     
     return images
 
-def save_batch(cognito_user_id, context, images):
+def save_batch(cognito_user_id, context, images, cost):
     user_db_id = get_user_db_id(cognito_user_id)
     
     conn = get_db()
     cur = conn.cursor()
     
-    cur.execute('INSERT INTO batches (user_id, context, status) VALUES (%s, %s, %s) RETURNING id',
-                (user_db_id, context, 'completed'))
+    cur.execute('INSERT INTO batches (user_id, context, status, cost) VALUES (%s, %s, %s, %s) RETURNING id',
+                (user_db_id, context, 'completed', cost))
     batch_id = cur.fetchone()[0]
     
     for image in images:

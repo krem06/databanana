@@ -1,26 +1,73 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../AuthContext'
+import { apiClient } from '../api'
 
 function Generate() {
   const [context, setContext] = useState('')
   const [excludeTags, setExcludeTags] = useState('')
+  const [imageCount, setImageCount] = useState(10)
   const [generating, setGenerating] = useState(false)
+  const [userCredits, setUserCredits] = useState(0)
+  const { user } = useAuth()
 
-  const handleGenerate = () => {
+  useEffect(() => {
+    if (user) {
+      fetchUserData()
+    }
+  }, [user])
+
+  const fetchUserData = async () => {
+    try {
+      const userData = await apiClient.getUser()
+      setUserCredits(userData.credits || 0)
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    }
+  }
+
+  const calculateCost = () => {
+    // Cost: $0.05 per image
+    return (imageCount * 0.05).toFixed(2)
+  }
+
+  const canAfford = () => {
+    return userCredits >= parseFloat(calculateCost())
+  }
+
+  const handleGenerate = async () => {
     if (context.length < 10) {
       alert('Context must be at least 10 characters')
       return
     }
+
+    if (!canAfford()) {
+      alert(`Insufficient credits. Need $${calculateCost()} but you have $${userCredits.toFixed(2)}`)
+      return
+    }
+
     setGenerating(true)
-    // TODO: Call API
+    try {
+      await apiClient.generateBatch(context, excludeTags, imageCount)
+      // Refresh user credits after generation
+      await fetchUserData()
+    } catch (error) {
+      console.error('Error generating batch:', error)
+      alert('Error generating images. Please try again.')
+    } finally {
+      setGenerating(false)
+    }
   }
 
   return (
     <div className="page">
       <div className="card">
         <h2>Generate Batch</h2>
+        <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>
+          Available Credits: <strong>${userCredits.toFixed(2)}</strong>
+        </p>
         
-        <div style={{ marginBottom: '1rem' }}>
-          <label>Context (80 chars max):</label>
+        <div className="form-field">
+          <label className="form-label">Context (80 chars max):</label>
           <input 
             type="text" 
             value={context}
@@ -29,11 +76,11 @@ function Generate() {
             className="input"
             maxLength={80}
           />
-          <small>{context.length}/80 characters</small>
+          <div className="form-hint">{context.length}/80 characters</div>
         </div>
         
-        <div style={{ marginBottom: '1rem' }}>
-          <label>Exclude tags (comma-separated):</label>
+        <div className="form-field">
+          <label className="form-label">Exclude tags (comma-separated):</label>
           <input 
             type="text" 
             value={excludeTags}
@@ -42,13 +89,28 @@ function Generate() {
             className="input"
           />
         </div>
+
+        <div className="form-field">
+          <label className="form-label">Number of images:</label>
+          <input 
+            type="number" 
+            value={imageCount}
+            onChange={(e) => setImageCount(Math.min(Math.max(1, parseInt(e.target.value) || 1), 100))}
+            min="1"
+            max="100"
+            className="input"
+          />
+          <div className="form-hint">
+            Cost: ${calculateCost()} ({canAfford() ? '✓ Can afford' : '✗ Insufficient credits'})
+          </div>
+        </div>
         
         <button 
           className="btn" 
           onClick={handleGenerate}
-          disabled={generating || context.length < 10}
+          disabled={generating || context.length < 10 || !canAfford()}
         >
-          {generating ? 'Generating...' : 'Generate 100 Images ($5)'}
+          {generating ? 'Generating...' : `Generate ${imageCount} Images ($${calculateCost()})`}
         </button>
         
         {generating && (

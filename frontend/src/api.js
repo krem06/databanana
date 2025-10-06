@@ -70,13 +70,23 @@ export const apiClient = {
   },
 
   // Generation endpoint
-  generateBatch: async (context, excludeTags) => {
-    const response = await post({
-      apiName, 
-      path: '/generate',
-      options: { body: { context, exclude_tags: excludeTags } }
-    })
-    return response.response
+  generateBatch: async (context, excludeTags, imageCount = 10) => {
+    try {
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/generate`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ context, exclude_tags: excludeTags, image_count: imageCount })
+      })
+      if (response.ok) {
+        return await response.json()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
+      }
+    } catch (error) {
+      console.error('Generate API Error:', error)
+      throw error
+    }
   },
 
   // Payment endpoint
