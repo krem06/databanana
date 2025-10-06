@@ -14,10 +14,12 @@ Globals:
         DB_USER: !Ref DatabaseUser
         DB_PASSWORD: !Ref DatabasePassword
         STRIPE_SECRET: !Ref StripeSecret
+        STRIPE_SECRET_TEST: !Ref StripeSecretTest
         S3_BUCKET: !Ref ImageBucket
         ANTHROPIC_API_KEY: !Ref AnthropicApiKey
         GEMINI_API_KEY: !Ref GeminiApiKey
         FRONTEND_URL: !Ref FrontendUrl
+        TEST_MODE: !Ref TestModeParam
   Api:
     Cors:
       AllowMethods: "'GET,POST,PUT,OPTIONS'"
@@ -45,7 +47,18 @@ Parameters:
   StripeSecret:
     Type: String
     NoEcho: true
-    Description: Stripe secret key
+    Description: Stripe secret key (live)
+  StripeSecretTest:
+    Type: String
+    NoEcho: true
+    Description: Stripe secret key (test)
+  TestModeParam:
+    Type: String
+    Description: Enable test mode for API mocking
+    Default: false
+    AllowedValues:
+      - true
+      - false
   AnthropicApiKey:
     Type: String
     NoEcho: true

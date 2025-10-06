@@ -5,7 +5,6 @@ import { ThemeProvider } from './ThemeContext'
 import AuthModal from './components/AuthModal'
 import PrivateRoute from './components/PrivateRoute'
 import ThemeToggle from './components/ThemeToggle'
-import { mockService } from './services/mockService'
 import Home from './pages/Home'
 import Gallery from './pages/Gallery'
 import Generate from './pages/Generate'
@@ -31,7 +30,7 @@ function Navigation() {
         <div className="nav-brand">
           <img src="/src/assets/databanana-top.jpg" alt="Data Banana" className="logo" />
           <span>databanana.ai</span>
-          {mockService.isTestMode && (
+          {import.meta.env.VITE_TEST_MODE === 'true' && (
             <span className="test-badge">TEST</span>
           )}
         </div>

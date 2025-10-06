@@ -1,6 +1,5 @@
 import { fetchAuthSession } from 'aws-amplify/auth'
 import { awsConfig } from './config'
-import { mockService } from './services/mockService'
 
 // Helper to get auth headers - the proven working approach
 const getAuthHeaders = async () => {
@@ -14,22 +13,20 @@ const getAuthHeaders = async () => {
 export const apiClient = {
   // User endpoints
   getUser: async () => {
-    return mockService.getUserData(async () => {
-      try {
-        const headers = await getAuthHeaders()
-        const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/user`, {
-          headers
-        })
-        if (response.ok) {
-          return await response.json()
-        } else {
-          throw new Error(`HTTP ${response.status}`)
-        }
-      } catch (error) {
-        console.error('API Error:', error)
-        throw error
+    try {
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/user`, {
+        headers
+      })
+      if (response.ok) {
+        return await response.json()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
-    })
+    } catch (error) {
+      console.error('API Error:', error)
+      throw error
+    }
   },
 
   updateCredits: async (amount) => {
@@ -84,24 +81,22 @@ export const apiClient = {
 
   // Payment endpoint
   createPayment: async (amount) => {
-    return mockService.createPayment(async () => {
-      try {
-        const headers = await getAuthHeaders()
-        const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/payment`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ amount })
-        })
-        if (response.ok) {
-          return await response.json()
-        } else {
-          throw new Error(`HTTP ${response.status}`)
-        }
-      } catch (error) {
-        console.error('Payment API Error:', error)
-        throw error
+    try {
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/payment`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ amount })
+      })
+      if (response.ok) {
+        return await response.json()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
-    })
+    } catch (error) {
+      console.error('Payment API Error:', error)
+      throw error
+    }
   },
 
   // Upload endpoint

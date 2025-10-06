@@ -3,7 +3,9 @@ import os
 import stripe
 from db_utils import get_cognito_user_id
 
-stripe.api_key = os.environ['STRIPE_SECRET']
+# Use test or live Stripe key based on TEST_MODE
+test_mode = os.environ.get('TEST_MODE', 'false').lower() == 'true'
+stripe.api_key = os.environ.get('STRIPE_SECRET_TEST') if test_mode else os.environ.get('STRIPE_SECRET')
 
 def handler(event, context):
     print(f"Payment function called")

@@ -5,6 +5,7 @@ from io import BytesIO
 from google import genai
 from anthropic import Anthropic
 from db_utils import get_db, get_cognito_user_id, get_user_db_id
+from mock_service import mock_claude_variations, mock_gemini_images, mock_rekognition_labels, is_test_mode
 
 # Initialize clients outside handler for reuse
 rekognition = boto3.client('rekognition')
@@ -36,6 +37,14 @@ def handler(event, context):
         return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
 
 def generate_variations(context, exclude_tags):
+    # Check for test mode mock
+    mock_response = mock_claude_variations(context, exclude_tags)
+    if mock_response:
+        # Parse the mock response to extract variations
+        content_data = json.loads(mock_response['content'][0]['text'])
+        return content_data['variations'][:10]  # Return first 10 variations
+    
+    # Real API call
     prompt = f"""Generate 10 realistic image prompts for: "{context}"
     Exclude: {exclude_tags}
     Return JSON array of short descriptions."""
@@ -52,6 +61,21 @@ def generate_variations(context, exclude_tags):
         return [f"{context} - variation {i+1}" for i in range(10)]
 
 def generate_images_with_gemini(variations, cognito_user_id):
+    # Check for test mode mock
+    mock_response = mock_gemini_images(variations)
+    if mock_response:
+        # Generate mock images without S3 upload
+        images = []
+        for i, variation in enumerate(variations):
+            images.append({
+                'id': i,
+                'prompt': variation,
+                'url': f'https://mock-bucket.s3.amazonaws.com/test/{cognito_user_id}/{i}_{hash(variation)}.png',
+                'tags': ['generated', 'gemini', 'mock']
+            })
+        return images
+    
+    # Real API calls
     images = []
     s3_client = boto3.client('s3')
     bucket = os.environ.get('S3_BUCKET')
