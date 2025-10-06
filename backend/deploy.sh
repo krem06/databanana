@@ -16,7 +16,10 @@ echo "Building SAM application..."
 sam build
 
 echo "Deploying to AWS..."
-sam deploy --guided
+
+# Deploy using samconfig.toml configuration
+echo "Using parameters from samconfig.toml..."
+sam deploy
 
 echo "✅ Deployment complete!"
 echo ""

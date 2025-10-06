@@ -10,23 +10,31 @@ Globals:
     Environment:
       Variables:
         DB_HOST: !Ref DatabaseHost
-        DB_NAME: databanana
+        DB_NAME: !Ref DatabaseName
         DB_USER: !Ref DatabaseUser
         DB_PASSWORD: !Ref DatabasePassword
         STRIPE_SECRET: !Ref StripeSecret
         S3_BUCKET: !Ref ImageBucket
         ANTHROPIC_API_KEY: !Ref AnthropicApiKey
-        NANO_BANANA_API_KEY: !Ref NanoBananaApiKey
+        GEMINI_API_KEY: !Ref GeminiApiKey
+        FRONTEND_URL: !Ref FrontendUrl
   Api:
     Cors:
       AllowMethods: "'GET,POST,PUT,OPTIONS'"
       AllowHeaders: "'Content-Type,Authorization'"
       AllowOrigin: "'*'"
+    Auth:
+      Authorizers:
+        CognitoAuthorizer:
+          UserPoolArn: !GetAtt UserPool.Arn
 
 Parameters:
   DatabaseHost:
     Type: String
     Description: PostgreSQL database host
+  DatabaseName:
+    Type: String
+    Description: Database name
   DatabaseUser:
     Type: String
     Description: Database username
@@ -42,10 +50,14 @@ Parameters:
     Type: String
     NoEcho: true
     Description: Anthropic Claude API key
-  NanoBananaApiKey:
+  GeminiApiKey:
     Type: String
     NoEcho: true
-    Description: Nano Banana API key
+    Description: Gemini API key for Nano Banana service
+  FrontendUrl:
+    Type: String
+    Description: Frontend URL for Stripe redirect URLs
+    Default: http://localhost:5173
 
 Resources:
   UserPool:
@@ -92,16 +104,14 @@ Resources:
             Path: /user
             Method: get
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
         UpdateCredits:
           Type: Api
           Properties:
             Path: /user/credits
             Method: post
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
 
   BatchFunction:
     Type: AWS::Serverless::Function
@@ -115,16 +125,14 @@ Resources:
             Path: /batches
             Method: get
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
         CreateBatch:
           Type: Api
           Properties:
             Path: /batches
             Method: post
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
 
   ImageFunction:
     Type: AWS::Serverless::Function
@@ -137,14 +145,15 @@ Resources:
           Properties:
             Path: /images
             Method: get
+            Auth:
+              Authorizer: CognitoAuthorizer
         UpdateImage:
           Type: Api
           Properties:
             Path: /images/{id}
             Method: put
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
 
   GenerateFunction:
     Type: AWS::Serverless::Function
@@ -160,8 +169,7 @@ Resources:
             Path: /generate
             Method: post
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
 
   PaymentFunction:
     Type: AWS::Serverless::Function
@@ -175,8 +183,7 @@ Resources:
             Path: /payment
             Method: post
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
 
   UploadFunction:
     Type: AWS::Serverless::Function
@@ -193,9 +200,38 @@ Resources:
             Path: /upload
             Method: post
             Auth:
-              Authorizer: 
-                UserPoolArn: !GetAtt UserPool.Arn
+              Authorizer: CognitoAuthorizer
 
+  ExportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: export.handler
+      Timeout: 300
+      MemorySize: 1024
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ImageBucket
+      Events:
+        Export:
+          Type: Api
+          Properties:
+            Path: /export
+            Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  WebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: webhook.handler
+      Events:
+        Webhook:
+          Type: Api
+          Properties:
+            Path: /webhook
+            Method: post
 
 Outputs:
   ApiGatewayApi:

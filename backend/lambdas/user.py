@@ -1,26 +1,58 @@
 import json
-from db_utils import get_db, get_cognito_user_id, get_user_db_id
+from db_utils import get_db, get_cognito_user_id, get_cognito_email, get_user_db_id
 
 def handler(event, context):
+    print(f"User function called with method: {event.get('httpMethod')}")
+    print(f"Event: {json.dumps(event)}")
+    
     try:
         cognito_user_id = get_cognito_user_id(event)
+        print(f"Cognito User ID: {cognito_user_id}")
+        
+        # Debug: Print all available claims
+        claims = event['requestContext']['authorizer']['claims']
+        print(f"All Cognito claims: {claims}")
+        
         method = event['httpMethod']
         
         if method == 'GET':
-            return get_user(cognito_user_id)
+            print("Handling GET request for user data")
+            return get_user(cognito_user_id, event)
+        # dangerous! clem
         elif method == 'POST':
+            print("Handling POST request for credit update")
             return update_credits(cognito_user_id, event)
             
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
+        print(f"Error in user handler: {e}")
+        return {
+            'statusCode': 500, 
+            'body': json.dumps({'error': str(e)}),
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+            }
+        }
 
-def get_user(cognito_user_id):
-    user_db_id = get_user_db_id(cognito_user_id)
+def get_user(cognito_user_id, event):
+    print(f"Getting user data for cognito_user_id: {cognito_user_id}")
     
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('SELECT email, credits FROM users WHERE id = %s', (user_db_id,))
-    user = cur.fetchone()
+    try:
+        email = get_cognito_email(event)
+        print(f"User email: {email}")
+        
+        user_db_id = get_user_db_id(cognito_user_id, email)
+        print(f"User DB ID: {user_db_id}")
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT email, credits FROM users WHERE id = %s', (user_db_id,))
+        user = cur.fetchone()
+        print(f"User data from DB: {user}")
+    except Exception as e:
+        print(f"Error getting user: {e}")
+        raise
     
     return {
         'statusCode': 200,
@@ -28,7 +60,12 @@ def get_user(cognito_user_id):
             'id': user_db_id,
             'email': user[0] or '',
             'credits': float(user[1])
-        })
+        }),
+        'headers': {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+        }
     }
 
 def update_credits(cognito_user_id, event):
@@ -43,4 +80,12 @@ def update_credits(cognito_user_id, event):
     new_credits = cur.fetchone()[0]
     conn.commit()
     
-    return {'statusCode': 200, 'body': json.dumps({'credits': float(new_credits)})}
+    return {
+        'statusCode': 200, 
+        'body': json.dumps({'credits': float(new_credits)}),
+        'headers': {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+        }
+    }

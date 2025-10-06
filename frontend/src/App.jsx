@@ -1,57 +1,100 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { AuthProvider, useAuth } from './AuthContext'
+import AuthModal from './components/AuthModal'
+import PrivateRoute from './components/PrivateRoute'
 import Home from './pages/Home'
 import Gallery from './pages/Gallery'
 import Generate from './pages/Generate'
 import Account from './pages/Account'
 import './App.css'
 
-function App() {
-  const [currentPage, setCurrentPage] = useState('home')
+function Navigation() {
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const { isAuthenticated, logout } = useAuth()
+  const location = useLocation()
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'home': return <Home />
-      case 'gallery': return <Gallery />
-      case 'generate': return <Generate />
-      case 'account': return <Account />
-      default: return <Home />
+  // Auto-show login modal when redirected from private route
+  useEffect(() => {
+    if (location.state?.showLogin) {
+      setShowAuthModal(true)
     }
-  }
+  }, [location])
+
+  const isActive = (path) => location.pathname === path
 
   return (
-    <div className="app">
+    <>
       <nav className="nav">
         <div className="nav-brand">
           <img src="/src/assets/databanana-top.jpg" alt="Data Banana" className="logo" />
           <span>databanana.ai</span>
         </div>
         <div className="nav-links">
-          <button onClick={() => setCurrentPage('home')} className={currentPage === 'home' ? 'active' : ''}>Home</button>
-          <button onClick={() => setCurrentPage('gallery')} className={currentPage === 'gallery' ? 'active' : ''}>Gallery</button>
-          <button onClick={() => setCurrentPage('generate')} className={currentPage === 'generate' ? 'active' : ''}>Generate</button>
-          <button onClick={() => setCurrentPage('account')} className={currentPage === 'account' ? 'active' : ''}>Account</button>
-          <button className="btn" style={{ marginLeft: '1rem' }}>Login</button>
+          <Link to="/" className={isActive('/') ? 'active' : ''}>Home</Link>
+          <Link to="/gallery" className={isActive('/gallery') ? 'active' : ''}>Gallery</Link>
+          {isAuthenticated && (
+            <>
+              <Link to="/generate" className={isActive('/generate') ? 'active' : ''}>Generate</Link>
+              <Link to="/account" className={isActive('/account') ? 'active' : ''}>Account</Link>
+            </>
+          )}
+          
+          {isAuthenticated ? (
+            <button className="btn" style={{ marginLeft: '1rem' }} onClick={logout}>
+              Logout
+            </button>
+          ) : (
+            <button className="btn" style={{ marginLeft: '1rem' }} onClick={() => setShowAuthModal(true)}>
+              Login
+            </button>
+          )}
         </div>
       </nav>
-      <main className="main">
-        {renderPage()}
-      </main>
-      <div className="dev-notice" style={{
-        position: 'fixed',
-        bottom: '1rem',
-        right: '1rem',
-        background: 'rgba(14, 165, 233, 0.9)',
-        color: 'white',
-        padding: '0.75rem 1.25rem',
-        borderRadius: '12px',
-        fontSize: '0.85rem',
-        fontWeight: '500',
-        boxShadow: '0 4px 12px rgba(14, 165, 233, 0.25)',
-        backdropFilter: 'blur(10px)'
-      }}>
-        Demo Mode - Deploy backend for authentication
+
+
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
+    </>
+  )
+}
+
+function AppContent() {
+  const { loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        Loading...
       </div>
+    )
+  }
+
+  return (
+    <div className="app">
+      <Navigation />
+      
+      <main className="main">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/generate" element={<PrivateRoute><Generate /></PrivateRoute>} />
+          <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
+        </Routes>
+      </main>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   )
 }
 

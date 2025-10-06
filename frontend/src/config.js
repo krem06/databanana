@@ -1,16 +1,16 @@
 export const awsConfig = {
   Auth: {
     Cognito: {
-      region: 'us-east-1',
-      userPoolId: 'us-east-1_XXXXXXXXX', // Replace after deployment
-      userPoolClientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace after deployment
+      region: 'eu-west-1',
+      userPoolId: 'eu-west-1_EzpGUD2LN',
+      userPoolClientId: '72o7kv9qo8oc6vf7qljggo4fu8',
     }
   },
   API: {
     REST: {
       databanana: {
-        endpoint: 'https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod', // Replace after deployment
-        region: 'us-east-1'
+        endpoint: 'https://dkor79bcf8.execute-api.eu-west-1.amazonaws.com/Prod',
+        region: 'eu-west-1'
       }
     }
   }

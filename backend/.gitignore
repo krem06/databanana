@@ -1,0 +1,4 @@
+parameters.json
+.aws-sam/
+*.pyc
+__pycache__/

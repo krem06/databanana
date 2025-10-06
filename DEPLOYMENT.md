@@ -3,7 +3,7 @@
 ## Prerequisites
 - AWS CLI configured with credentials
 - SAM CLI installed (`pip install aws-sam-cli`)
-- PostgreSQL database (RDS recommended)
+- PostgreSQL database (external service like Neon, Supabase, or PlanetScale)
 
 ## Step 1: Deploy Backend Infrastructure
 
@@ -15,14 +15,16 @@ cd backend
 **SAM will prompt for:**
 - Stack name: `databanana-prod`
 - AWS region: `us-east-1`
-- Database host: `your-db.rds.amazonaws.com`
+- Database host: `your-external-db-host.com`
 - Database credentials
-- API keys: Stripe, Claude, Nano Banana
+- API keys: Stripe, Claude, Gemini
 
 **SAM outputs (save these):**
 - `ApiGatewayApi`: https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod/
 - `UserPoolId`: us-east-1_XXXXXXXXX
 - `UserPoolClientId`: xxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
 
 ## Step 2: Configure Frontend
 
@@ -51,7 +53,7 @@ export const awsConfig = {
 
 Connect to your PostgreSQL database and run:
 ```bash
-psql -h your-db.rds.amazonaws.com -U username -d databanana -f backend/schema.sql
+psql -h your-external-db-host.com -U username -d databanana -f backend/schema.sql
 ```
 
 ## Step 4: Deploy Frontend to Amplify
@@ -82,14 +84,14 @@ amplify publish
 Backend Lambda functions use:
 - `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
 - `ANTHROPIC_API_KEY` (Claude)
-- `NANO_BANANA_API_KEY` (Image generation)
+- `GEMINI_API_KEY` (Image generation via Nano Banana)
 - `STRIPE_SECRET` (Payments)
 - `S3_BUCKET` (Auto-created by SAM)
 
 ## Troubleshooting
 
 **CORS errors**: Ensure frontend config matches SAM outputs
-**Database errors**: Check RDS security groups allow Lambda access
+**Database errors**: Check database firewall allows Lambda access from AWS IPs
 **API key errors**: Verify all keys are correctly set in SAM parameters
 **Build errors**: Check Amplify build logs in console
 
@@ -99,5 +101,5 @@ Backend Lambda functions use:
 - **API Gateway**: ~$3.50/million requests  
 - **Cognito**: Free tier covers most usage
 - **S3**: ~$0.023/GB storage
-- **RDS**: ~$13/month (db.t3.micro)
+- **External DB**: ~$0-25/month (Neon free tier or paid plans)
 - **Amplify Hosting**: ~$1/month for small apps

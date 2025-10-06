@@ -57,6 +57,27 @@
   box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
 }
 
+.nav-links a {
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-links a:hover {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+}
+
+.nav-links a.active {
+  background: #0ea5e9;
+  color: white;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+}
+
 .main {
   flex: 1;
   padding: 2rem;

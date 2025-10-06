@@ -1,12 +1,17 @@
 import json
 import os
 import boto3
+from io import BytesIO
+from google import genai
 from anthropic import Anthropic
 from db_utils import get_db, get_cognito_user_id, get_user_db_id
 
 # Initialize clients outside handler for reuse
 rekognition = boto3.client('rekognition')
 anthropic_client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+
+# Configure Gemini
+gemini_client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 def handler(event, context):
     try:
@@ -15,9 +20,9 @@ def handler(event, context):
         exclude_tags = body.get('exclude_tags', '')
         cognito_user_id = get_cognito_user_id(event)
         
-        # Generate variations and mock images (simplified for demo)
+        # Generate variations and real images
         variations = generate_variations(context_text, exclude_tags)
-        images = create_mock_images(variations[:10])  # Only 10 for demo
+        images = generate_images_with_gemini(variations[:10], cognito_user_id)  # Only 10 for demo
         
         # Save batch
         batch_id = save_batch(cognito_user_id, context_text, images)
@@ -46,16 +51,52 @@ def generate_variations(context, exclude_tags):
         # Fallback variations
         return [f"{context} - variation {i+1}" for i in range(10)]
 
-def create_mock_images(variations):
-    return [
-        {
-            'id': i,
-            'prompt': variation,
-            'url': f'https://picsum.photos/400/300?random={i}',
-            'tags': ['demo', 'placeholder']
-        }
-        for i, variation in enumerate(variations)
-    ]
+def generate_images_with_gemini(variations, cognito_user_id):
+    images = []
+    s3_client = boto3.client('s3')
+    bucket = os.environ.get('S3_BUCKET')
+    
+    for i, variation in enumerate(variations):
+        try:
+            # Generate image with Gemini
+            response = gemini_client.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents=[f"Generate a high-quality image based on this prompt: {variation}"]
+            )
+            
+            # Extract image data from response
+            image_parts = [
+                part.inline_data.data
+                for part in response.candidates[0].content.parts
+                if part.inline_data
+            ]
+            
+            if image_parts:
+                # Upload to S3
+                key = f"generated/{cognito_user_id}/{i}_{hash(variation)}.png"
+                s3_client.put_object(
+                    Bucket=bucket,
+                    Key=key,
+                    Body=image_parts[0],
+                    ContentType='image/png'
+                )
+                
+                # Generate public URL
+                url = f"https://{bucket}.s3.amazonaws.com/{key}"
+                
+                images.append({
+                    'id': i,
+                    'prompt': variation,
+                    'url': url,
+                    'tags': ['generated', 'gemini']
+                })
+            else:
+                raise ValueError("No image data returned from Gemini")
+                
+        except Exception as e:
+            print(f"Error generating image {i}: {str(e)}")
+    
+    return images
 
 def save_batch(cognito_user_id, context, images):
     user_db_id = get_user_db_id(cognito_user_id)

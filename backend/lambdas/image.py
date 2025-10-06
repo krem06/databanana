@@ -48,6 +48,7 @@ def get_images(event):
     
     return {'statusCode': 200, 'body': json.dumps({'images': images})}
 
+# not needed? clem
 def update_image(cognito_user_id, event):
     image_id = event['pathParameters']['id']
     body = json.loads(event['body'])

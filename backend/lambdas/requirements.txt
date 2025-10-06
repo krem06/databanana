@@ -1,5 +1,5 @@
 psycopg2-binary==2.9.9
-stripe==11.9.0
+stripe
 boto3==1.35.91
 anthropic==0.40.0
 google-genai==1.40.0
