@@ -20,18 +20,13 @@ mock_data = {
         },
         'content': [{
             'type': 'text',
-            'text': json.dumps({
-                'batch_id': 'batch_haiku_123',
-                'variations': [
-                    f'A {["orange", "black", "white", "gray", "calico"][i % 5]} cat '
-                    f'{["sitting", "lying", "perched", "resting"][i % 4]} on a '
-                    f'{["windowsill", "wooden sill", "marble ledge", "window frame"][i % 4]} '
-                    f'{["in sunlight", "during sunset", "with curtains", "overlooking garden"][i % 4]}'
-                    for i in range(100)
-                ],
-                'processing_time': '1.2s',
-                'cost_estimate': 0.00089
-            })
+            'text': '; '.join([
+                f'A {["orange", "black", "white", "gray", "calico"][i % 5]} cat '
+                f'{["sitting", "lying", "perched", "resting"][i % 4]} on a '
+                f'{["windowsill", "wooden sill", "marble ledge", "window frame"][i % 4]} '
+                f'{["in sunlight", "during sunset", "with curtains", "overlooking garden"][i % 4]}'
+                for i in range(100)
+            ])
         }]
     },
 
@@ -105,20 +100,27 @@ def simulate_delay(seconds=0.5):
     if is_test_mode:
         time.sleep(seconds)
 
-def mock_claude_variations(original_prompt, exclude_tags=""):
+def mock_claude_variations(original_prompt, exclude_tags="", count=10):
     """Mock Claude Haiku prompt variations"""
     if not is_test_mode:
         return None
     
-    print("🧪 TEST MODE: Mocking Claude Haiku API call")
+    print(f"🧪 TEST MODE: Mocking Claude Haiku API call for {count} variations")
     simulate_delay(1.2)
     
-    # Customize based on input
+    # Generate semicolon-separated variations based on original prompt
+    variations = []
+    for i in range(count):
+        variations.append(
+            f'{original_prompt} with {["orange", "black", "white", "gray", "calico"][i % 5]} '
+            f'{["cat", "dog", "bird", "rabbit", "hamster"][i % 5]} '
+            f'{["sitting", "lying", "perched", "resting", "playing"][i % 5]} '
+            f'{["in sunlight", "during sunset", "with shadows", "in bright light", "at dawn"][i % 5]}'
+        )
+    
+    # Return semicolon-separated text response (matching real Claude format)
     response = mock_data['prompt_variations'].copy()
-    content_data = json.loads(response['content'][0]['text'])
-    content_data['original_prompt'] = original_prompt
-    content_data['exclude_tags'] = exclude_tags
-    response['content'][0]['text'] = json.dumps(content_data)
+    response['content'][0]['text'] = '; '.join(variations)
     
     return response
 

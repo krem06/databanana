@@ -44,9 +44,9 @@ def handler(event, context):
         cur.execute('UPDATE users SET credits = credits - %s WHERE id = %s', (cost, user_db_id))
         conn.commit()
         
-        # Generate variations and real images
-        variations = generate_variations(context_text, exclude_tags)
-        images = generate_images_with_gemini(variations[:image_count], cognito_user_id)
+        # Generate exact number of variations as requested
+        variations = generate_variations(context_text, exclude_tags, image_count)
+        images = generate_images_with_gemini(variations, cognito_user_id)
         
         # Save batch
         batch_id = save_batch(cognito_user_id, context_text, images, cost)
@@ -61,29 +61,51 @@ def handler(event, context):
     except Exception as e:
         return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
 
-def generate_variations(context, exclude_tags):
+def generate_variations(context, exclude_tags, count):
     # Check for test mode mock
-    mock_response = mock_claude_variations(context, exclude_tags)
+    mock_response = mock_claude_variations(context, exclude_tags, count)
     if mock_response:
-        # Parse the mock response to extract variations
-        content_data = json.loads(mock_response['content'][0]['text'])
-        return content_data['variations'][:10]  # Return first 10 variations
+        # Parse semicolon-separated mock response
+        variations_text = mock_response['content'][0]['text']
+        variations = [v.strip() for v in variations_text.split(';') if v.strip()]
+        return variations[:count]
     
-    # Real API call
-    prompt = f"""Generate 10 realistic image prompts for: "{context}"
-    Exclude: {exclude_tags}
-    Return JSON array of short descriptions."""
+    # Real API call - single request for all variations
+    prompt = f"""Generate exactly {count} diverse, realistic image prompts based on: "{context}"
+
+Rules:
+- Each prompt should be a complete, detailed scene description
+- Exclude these elements: {exclude_tags}
+- Keep each prompt under 50 words
+- Make them diverse but thematically related to the original context
+- Separate each prompt with a semicolon (;)
+- Do not number them or add extra formatting
+- Return only the prompts separated by semicolons
+
+Example format: "prompt 1; prompt 2; prompt 3"
+"""
     
     try:
         response = anthropic_client.messages.create(
             model="claude-3-haiku-20240307",
-            max_tokens=1000,
+            max_tokens=2000,  # Increased for 100 variations
             messages=[{"role": "user", "content": prompt}]
         )
-        return json.loads(response.content[0].text)
-    except:
+        
+        # Parse semicolon-separated response
+        variations_text = response.content[0].text.strip()
+        variations = [v.strip() for v in variations_text.split(';') if v.strip()]
+        
+        # Ensure we have the right count, pad with fallbacks if needed
+        while len(variations) < count:
+            variations.append(f"{context} - variation {len(variations) + 1}")
+            
+        return variations[:count]
+        
+    except Exception as e:
+        print(f"Claude API error: {e}")
         # Fallback variations
-        return [f"{context} - variation {i+1}" for i in range(10)]
+        return [f"{context} - variation {i+1}" for i in range(count)]
 
 def generate_images_with_gemini(variations, cognito_user_id):
     # Check for test mode mock
