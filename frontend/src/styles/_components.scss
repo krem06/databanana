@@ -44,7 +44,7 @@
   font-size: var(--font-base);
   width: 100%;
   transition: var(--transition);
-  background: white;
+  background: var(--input-bg);
 
   &:focus {
     outline: none;
@@ -52,8 +52,21 @@
     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
   }
 
+  // Remove default browser validation styling
   &:invalid {
-    border-color: var(--error);
+    border-color: var(--border-light);
+    box-shadow: none;
+  }
+
+  // Remove red outline on required fields
+  &:required {
+    box-shadow: none;
+  }
+
+  // Override any browser-specific validation styling
+  &:not(:focus):invalid {
+    border-color: var(--border-light);
+    box-shadow: none;
   }
 }
 

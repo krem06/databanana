@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './AuthContext'
+import { ThemeProvider } from './ThemeContext'
 import AuthModal from './components/AuthModal'
 import PrivateRoute from './components/PrivateRoute'
+import ThemeToggle from './components/ThemeToggle'
 import Home from './pages/Home'
 import Gallery from './pages/Gallery'
 import Generate from './pages/Generate'
@@ -38,6 +40,8 @@ function Navigation() {
               <Link to="/account" className={isActive('/account') ? 'active' : ''}>Account</Link>
             </>
           )}
+          
+          <ThemeToggle />
           
           {isAuthenticated ? (
             <button className="btn" style={{ marginLeft: '1rem' }} onClick={logout}>
@@ -89,11 +93,13 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

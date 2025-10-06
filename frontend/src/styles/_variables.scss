@@ -1,4 +1,6 @@
 // Design tokens - centralized variables for easy theming
+
+// Light theme (default)
 :root {
   // Colors
   --primary: #0ea5e9;
@@ -11,7 +13,10 @@
   --text-muted: #94a3b8;
   --bg-glass: rgba(255, 255, 255, 0.8);
   --bg-step: rgba(255, 255, 255, 0.6);
+  --bg-body: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   --border-light: rgba(226, 232, 240, 0.5);
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --input-bg: white;
   
   // Spacing
   --space-xs: 0.25rem;
@@ -46,6 +51,25 @@
   
   // Transitions
   --transition: all 0.2s ease;
+}
+
+// Dark theme
+:root[data-theme="dark"] {
+  // Colors - adjusted for dark mode
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  --primary-darker: #2563eb;
+  --success: #34d399;
+  --error: #f87171;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --bg-glass: rgba(30, 41, 59, 0.8);
+  --bg-step: rgba(51, 65, 85, 0.6);
+  --bg-body: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --border-light: rgba(100, 116, 139, 0.3);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --input-bg: #334155;
 }
 
 // SCSS Variables for calculations and mixins

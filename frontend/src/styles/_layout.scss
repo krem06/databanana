@@ -3,7 +3,8 @@
 .app {
   min-height: 100vh;
   @include flex-column;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: var(--bg-body);
+  transition: var(--transition);
 }
 
 .nav {
