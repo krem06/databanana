@@ -1,0 +1,62 @@
+// Utility mixins for common patterns
+
+// Glass morphism effect
+@mixin glass($bg: var(--bg-glass), $border: var(--border-light)) {
+  background: $bg;
+  backdrop-filter: var(--blur);
+  border: 1px solid $border;
+}
+
+// Flexbox utilities
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// Grid utilities  
+@mixin grid($columns: 1fr 1fr, $gap: var(--space-xl)) {
+  display: grid;
+  grid-template-columns: $columns;
+  gap: $gap;
+}
+
+// Button states
+@mixin button-hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+@mixin button-disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+// Typography
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Badge/Circle
+@mixin circle($size: 24px) {
+  width: $size;
+  height: $size;
+  border-radius: var(--radius-full);
+  @include flex-center;
+  flex-shrink: 0;
+}

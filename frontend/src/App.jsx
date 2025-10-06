@@ -7,7 +7,6 @@ import Home from './pages/Home'
 import Gallery from './pages/Gallery'
 import Generate from './pages/Generate'
 import Account from './pages/Account'
-import './App.css'
 
 function Navigation() {
   const [showAuthModal, setShowAuthModal] = useState(false)

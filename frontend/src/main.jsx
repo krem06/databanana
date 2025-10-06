@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Amplify } from 'aws-amplify'
 import { awsConfig } from './config'
-import './index.css'
+import './App.scss'
 import App from './App.jsx'
 
 Amplify.configure(awsConfig)
