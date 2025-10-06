@@ -17,68 +17,17 @@ function Home() {
           flexDirection: 'column',
           gap: '0.75rem'
         }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '1rem 1.5rem',
-            background: 'rgba(255, 255, 255, 0.6)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(226, 232, 240, 0.5)'
-          }}>
-            <div style={{
-              background: '#0ea5e9',
-              color: 'white',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              flexShrink: 0
-            }}>1</div>
+          <div className="step-item">
+            <div className="step-badge">1</div>
             <span style={{ color: '#475569', fontSize: '1rem' }}>Generate 10 VLM dataset images from your context</span>
           </div>
           
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '1rem 1.5rem',
-            background: 'rgba(255, 255, 255, 0.6)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(226, 232, 240, 0.5)'
-          }}>
-            <div style={{
-              background: '#0ea5e9',
-              color: 'white',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              flexShrink: 0
-            }}>2</div>
+          <div className="step-item">
+            <div className="step-badge">2</div>
             <span style={{ color: '#475569', fontSize: '1rem' }}>Validate images for quality and relevance (5-10 mins)</span>
           </div>
           
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '1rem 1.5rem',
-            background: 'rgba(255, 255, 255, 0.6)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(226, 232, 240, 0.5)'
-          }}>
+          <div className="step-item">
             <div style={{
               background: '#0ea5e9',
               color: 'white',
@@ -95,35 +44,14 @@ function Home() {
             <span style={{ color: '#475569', fontSize: '1rem' }}>Export in standard formats (COCO, YOLO, etc.)</span>
           </div>
           
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '1rem 1.5rem',
-            background: 'rgba(255, 255, 255, 0.6)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(226, 232, 240, 0.5)'
-          }}>
-            <div style={{
-              background: '#22c55e',
-              color: 'white',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              flexShrink: 0
-            }}>✓</div>
+          <div className="step-item">
+            <div className="step-badge success">✓</div>
             <span style={{ color: '#475569', fontSize: '1rem' }}>Valid images added to public gallery for community use</span>
           </div>
         </div>
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+      <div className="grid-2" style={{ marginBottom: '2rem' }}>
         <div className="card">
           <h3 style={{ color: '#1e293b', marginBottom: '1.5rem', fontSize: '1.25rem' }}>How it works</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

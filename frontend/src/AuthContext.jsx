@@ -1,10 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { getCurrentUser, signIn, signUp, signOut, confirmSignUp, resetPassword, confirmResetPassword } from 'aws-amplify/auth'
-import { Amplify } from 'aws-amplify'
-import { awsConfig } from './config'
-
-// Configure Amplify
-Amplify.configure(awsConfig)
 
 const AuthContext = createContext()
 
@@ -16,7 +11,7 @@ export function AuthProvider({ children }) {
     checkAuthState()
   }, [])
 
-  async function checkAuthState() {
+  const checkAuthState = async () => {
     try {
       const currentUser = await getCurrentUser()
       setUser(currentUser)
@@ -27,53 +22,52 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function login(email, password) {
-    const { isSignedIn } = await signIn({ username: email, password })
-    if (isSignedIn) {
+  const login = async (email, password) => {
+    const result = await signIn({ username: email, password })
+    if (result.isSignedIn) {
       await checkAuthState()
     }
-    return isSignedIn
+    return result
   }
 
-  async function signup(email, password) {
-    await signUp({ username: email, password })
-    // User needs to confirm email before they can sign in
+  const signup = async (email, password) => {
+    return await signUp({ username: email, password })
   }
 
-  async function confirmEmail(email, code) {
-    await confirmSignUp({ username: email, confirmationCode: code })
+  const confirmEmail = async (email, code) => {
+    const result = await confirmSignUp({ username: email, confirmationCode: code })
+    if (result.isSignUpComplete) {
+      await checkAuthState()
+    }
+    return result
   }
 
-  async function logout() {
+  const forgotPassword = async (email) => {
+    return await resetPassword({ username: email })
+  }
+
+  const confirmForgotPassword = async (email, code, newPassword) => {
+    return await confirmResetPassword({ username: email, confirmationCode: code, newPassword })
+  }
+
+  const logout = async () => {
     await signOut()
     setUser(null)
   }
 
-  async function forgotPassword(email) {
-    await resetPassword({ username: email })
-  }
-
-  async function confirmForgotPassword(email, code, newPassword) {
-    await confirmResetPassword({ username: email, confirmationCode: code, newPassword })
-  }
-
   const value = {
     user,
-    loading,
     isAuthenticated: !!user,
+    loading,
     login,
     signup,
     confirmEmail,
-    logout,
     forgotPassword,
-    confirmForgotPassword
+    confirmForgotPassword,
+    logout
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

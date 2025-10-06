@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { fetchAuthSession, updatePassword } from 'aws-amplify/auth'
+import { updatePassword } from 'aws-amplify/auth'
 import { useAuth } from '../AuthContext'
-import { awsConfig } from '../config'
+import { apiClient } from '../api'
 
 function Account() {
   const [credits, setCredits] = useState(0)
@@ -23,21 +23,9 @@ function Account() {
 
   // Fetch user credits from backend
   const fetchUserCredits = async () => {
-    
     try {
-      const session = await fetchAuthSession()
-      const token = session.tokens.idToken.toString()
-      
-      const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/user`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      
-      if (response.ok) {
-        const userData = await response.json()
-        setCredits(userData.credits || 0)
-      }
+      const userData = await apiClient.getUser()
+      setCredits(userData.credits || 0)
     } catch (error) {
       console.error('Failed to fetch credits:', error)
     }
@@ -129,24 +117,8 @@ function Account() {
   const handlePayment = async (amount) => {
     setProcessingPayment(amount)
     try {
-      // Get authenticated session
-      const session = await fetchAuthSession()
-      const token = session.tokens.idToken.toString()
-      
-      // Call your payment endpoint
-      const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/payment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ amount })
-      })
-      
-      const data = await response.json()
-      
-      if (response.ok && data.checkout_url) {
-        // Redirect to Stripe Checkout using the URL from the session
+      const data = await apiClient.createPayment(amount)
+      if (data.checkout_url) {
         window.location.href = data.checkout_url
       } else {
         alert('Payment setup failed: ' + (data.error || 'Unknown error'))
@@ -161,11 +133,11 @@ function Account() {
 
   return (
     <div className="page">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+      <div className="grid-2">
         <div className="card">
           <h2>Account Details</h2>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Email:</label>
+          <div className="form-field">
+            <label className="form-label">Email:</label>
             <input 
               type="email" 
               value={userEmail}
@@ -173,14 +145,12 @@ function Account() {
               disabled
               style={{ backgroundColor: '#f8fafc', color: '#64748b' }}
             />
-            <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
-              Email cannot be changed
-            </p>
+            <p className="form-hint">Email cannot be changed</p>
           </div>
           
           <form onSubmit={handlePasswordUpdate}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Current Password:</label>
+              <div className="form-field">
+                <label className="form-label">Current Password:</label>
                 <input 
                   type="password" 
                   value={passwordForm.current}
@@ -190,8 +160,8 @@ function Account() {
                 />
               </div>
               
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>New Password:</label>
+              <div className="form-field">
+                <label className="form-label">New Password:</label>
                 <input 
                   type="password" 
                   value={passwordForm.new}
@@ -202,8 +172,8 @@ function Account() {
                 />
               </div>
               
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Confirm New Password:</label>
+              <div className="form-field">
+                <label className="form-label">Confirm New Password:</label>
                 <input 
                   type="password" 
                   value={passwordForm.confirm}
@@ -310,8 +280,8 @@ function Account() {
           Export your selected images with annotations for machine learning training
         </p>
         
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Export Format:</label>
+        <div className="form-field">
+          <label className="form-label">Export Format:</label>
           <select 
             value={exportFormat} 
             onChange={(e) => setExportFormat(e.target.value)}

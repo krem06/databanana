@@ -1,12 +1,32 @@
-import { get, post, put } from 'aws-amplify/api'
+import { fetchAuthSession } from 'aws-amplify/auth'
+import { awsConfig } from './config'
 
-const apiName = 'databanana'
+// Helper to get auth headers - the proven working approach
+const getAuthHeaders = async () => {
+  const session = await fetchAuthSession()
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${session.tokens.idToken.toString()}`
+  }
+}
 
 export const apiClient = {
   // User endpoints
   getUser: async () => {
-    const response = await get({ apiName, path: '/user' })
-    return response.response
+    try {
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/user`, {
+        headers
+      })
+      if (response.ok) {
+        return await response.json()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
+      }
+    } catch (error) {
+      console.error('API Error:', error)
+      throw error
+    }
   },
 
   updateCredits: async (amount) => {
@@ -61,12 +81,22 @@ export const apiClient = {
 
   // Payment endpoint
   createPayment: async (amount) => {
-    const response = await post({
-      apiName, 
-      path: '/payment',
-      options: { body: { amount } }
-    })
-    return response.response
+    try {
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${awsConfig.API.REST.databanana.endpoint}/payment`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ amount })
+      })
+      if (response.ok) {
+        return await response.json()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
+      }
+    } catch (error) {
+      console.error('Payment API Error:', error)
+      throw error
+    }
   },
 
   // Upload endpoint
