@@ -7,6 +7,9 @@ def handler(event, context):
         
         if method == 'GET':
             return get_images(event)
+        elif method == 'POST':
+            cognito_user_id = get_cognito_user_id(event)
+            return create_images(cognito_user_id, event)
         elif method == 'PUT':
             cognito_user_id = get_cognito_user_id(event)
             return update_image(cognito_user_id, event)
@@ -23,7 +26,7 @@ def get_images(event):
         batch_id = batch_id.get('batch_id')
     
     if batch_id:
-        cur.execute('''SELECT id, prompt, url, tags, selected 
+        cur.execute('''SELECT id, prompt, url, tags, validated, rejected 
                        FROM images 
                        WHERE batch_id = %s 
                        ORDER BY created_at
@@ -41,12 +44,46 @@ def get_images(event):
             'prompt': row[1],
             'url': row[2],
             'tags': json.loads(row[3]) if row[3] else [],
-            'selected': row[4] if len(row) > 4 else None
+            'selected': row[4] if len(row) > 4 else None,  # validated mapped to 'selected' for frontend
+            'rejected': row[5] if len(row) > 5 else None
         }
         for row in cur.fetchall()
     ]
     
     return {'statusCode': 200, 'body': json.dumps({'images': images})}
+
+def create_images(cognito_user_id, event):
+    """Save generated images to database"""
+    body = json.loads(event['body'])
+    batch_id = body['batch_id']
+    dataset_id = body['dataset_id']
+    images = body['images']
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        # Insert all images for this batch
+        for image in images:
+            cur.execute('''
+                INSERT INTO images (batch_id, dataset_id, prompt, url, tags, validated, rejected) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                batch_id, 
+                dataset_id, 
+                image['prompt'], 
+                image['url'], 
+                json.dumps(image.get('tags', [])),
+                False,  # validated
+                False   # rejected
+            ))
+        
+        conn.commit()
+        return {'statusCode': 201, 'body': json.dumps({'success': True})}
+        
+    except Exception as e:
+        conn.rollback()
+        raise e
 
 # not needed? clem
 def update_image(cognito_user_id, event):
@@ -70,8 +107,12 @@ def update_image(cognito_user_id, event):
     params = []
     
     if 'selected' in body:
-        updates.append('selected = %s')
+        updates.append('validated = %s')  # Frontend sends 'selected', we store as 'validated'
         params.append(body['selected'])
+    
+    if 'rejected' in body:
+        updates.append('rejected = %s')
+        params.append(body['rejected'])
     
     if 'public' in body:
         updates.append('public = %s')

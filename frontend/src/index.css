@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  }
+  
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Manual Dark Mode Implementation */
+  
+  /* Light mode (default) */
+  body {
+    background-color: #f9fafb;
+    color: #111827;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  /* Dark mode */
+  .dark body {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+  
+  /* Navigation */
+  .nav-light {
+    background-color: white;
+    border-color: #e5e7eb;
+    color: #111827;
+  }
+  
+  .dark .nav-light {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+  
+  /* Cards */
+  .card-manual {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .dark .card-manual {
+    background-color: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Inputs */
+  .input-manual {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #111827;
+    transition: all 0.3s ease;
+  }
+  
+  .input-manual:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  
+  .input-manual::placeholder {
+    color: #6b7280;
+  }
+  
+  .dark .input-manual {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+  
+  .dark .input-manual:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+  }
+  
+  .dark .input-manual::placeholder {
+    color: #9ca3af;
+  }
+  
+  /* Text colors */
+  .text-manual {
+    color: #111827;
+    transition: color 0.3s ease;
+  }
+  
+  .dark .text-manual {
+    color: #f3f4f6;
+  }
+  
+  .text-gray-manual {
+    color: #6b7280;
+    transition: color 0.3s ease;
+  }
+  
+  .dark .text-gray-manual {
+    color: #d1d5db;
+  }
+  
+  /* Clean approach - let Tailwind dark: prefixes handle everything */
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:text-gray-600 dark:disabled:bg-gray-600 dark:disabled:text-gray-400;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-6 py-3 rounded-lg transition-colors duration-200 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100 dark:border dark:border-gray-500;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 transition-all duration-200 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-100 dark:focus:ring-blue-400 dark:focus:border-blue-400 dark:placeholder-gray-400;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-600;
+  }
+}

@@ -55,24 +55,13 @@ export default function AuthModal({ isOpen, onClose }) {
   }
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div className="card" style={{ width: '400px', margin: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2>{mode === 'login' ? 'Login' : mode === 'signup' ? 'Sign Up' : mode === 'confirm' ? 'Confirm Email' : mode === 'forgot' ? 'Forgot Password' : 'Reset Password'}</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="card p-6 w-full max-w-md mx-4">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">{mode === 'login' ? 'Login' : mode === 'signup' ? 'Sign Up' : mode === 'confirm' ? 'Confirm Email' : mode === 'forgot' ? 'Forgot Password' : 'Reset Password'}</h2>
           <button 
             onClick={onClose}
-            style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
           >
             ×
           </button>
@@ -80,13 +69,13 @@ export default function AuthModal({ isOpen, onClose }) {
 
         <form onSubmit={handleSubmit}>
           {mode !== 'confirm' && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Email:</label>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email:</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input"
+                className="input-field"
                 required
                 disabled={mode === 'confirm'}
               />
@@ -94,16 +83,16 @@ export default function AuthModal({ isOpen, onClose }) {
           )}
 
           {mode === 'confirm' && (
-            <div style={{ marginBottom: '1rem' }}>
-              <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+            <div className="mb-4">
+              <p className="mb-4 text-gray-600">
                 Enter the confirmation code sent to <strong>{email}</strong>
               </p>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Confirmation Code:</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Confirmation Code:</label>
               <input
                 type="text"
                 value={confirmationCode}
                 onChange={(e) => setConfirmationCode(e.target.value)}
-                className="input"
+                className="input-field"
                 required
                 placeholder="123456"
               />
@@ -112,27 +101,27 @@ export default function AuthModal({ isOpen, onClose }) {
 
           {mode === 'reset' && (
             <>
-              <div style={{ marginBottom: '1rem' }}>
-                <p style={{ marginBottom: '1rem', color: '#64748b' }}>
+              <div className="mb-4">
+                <p className="mb-4 text-gray-600">
                   Enter the reset code sent to <strong>{email}</strong> and your new password
                 </p>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Reset Code:</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reset Code:</label>
                 <input
                   type="text"
                   value={confirmationCode}
                   onChange={(e) => setConfirmationCode(e.target.value)}
-                  className="input"
+                  className="input-field"
                   required
                   placeholder="123456"
                 />
               </div>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>New Password:</label>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">New Password:</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="input"
+                  className="input-field"
                   required
                   minLength={6}
                 />
@@ -141,13 +130,13 @@ export default function AuthModal({ isOpen, onClose }) {
           )}
 
           {mode !== 'confirm' && mode !== 'forgot' && mode !== 'reset' && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Password:</label>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password:</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input"
+                className="input-field"
                 required
                 minLength={6}
               />
@@ -155,68 +144,66 @@ export default function AuthModal({ isOpen, onClose }) {
           )}
 
           {message && (
-            <p style={{ 
-              color: message.includes('Check your email') ? '#059669' : '#dc2626',
-              marginBottom: '1rem',
-              fontSize: '0.9rem'
-            }}>
+            <p className={`text-sm mb-4 ${
+              message.includes('Check your email') || message.includes('confirmed') || message.includes('successfully')
+                ? 'text-green-600' 
+                : 'text-red-600'
+            }`}>
               {message}
             </p>
           )}
 
           <button 
             type="submit" 
-            className="btn" 
+            className={`w-full mb-4 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'btn-primary'}`}
             disabled={loading}
-            style={{ 
-              width: '100%', 
-              marginBottom: '1rem',
-              backgroundColor: loading ? '#64748b' : '#3b82f6'
-            }}
           >
             {loading ? 'Loading...' : (mode === 'login' ? 'Login' : mode === 'signup' ? 'Sign Up' : mode === 'confirm' ? 'Confirm' : mode === 'forgot' ? 'Send Reset Code' : 'Reset Password')}
           </button>
         </form>
 
         {mode !== 'confirm' && mode !== 'forgot' && mode !== 'reset' && (
-          <p style={{ textAlign: 'center', fontSize: '0.9rem' }}>
+          <div className="text-center text-sm">
             {mode === 'login' ? (
               <>
-                Don't have an account?{' '}
-                <button
-                  onClick={() => setMode('signup')}
-                  style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  Sign up
-                </button>
-                <br />
-                <button
-                  onClick={() => setMode('forgot')}
-                  style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline', marginTop: '0.5rem' }}
-                >
-                  Forgot password?
-                </button>
+                <p>
+                  Don't have an account?{' '}
+                  <button
+                    onClick={() => setMode('signup')}
+                    className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
+                  >
+                    Sign up
+                  </button>
+                </p>
+                <p className="mt-2">
+                  <button
+                    onClick={() => setMode('forgot')}
+                    className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                </p>
               </>
             ) : (
-              <>
+              <p>
                 Already have an account?{' '}
                 <button
                   onClick={() => setMode('login')}
-                  style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline' }}
+                  className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
                 >
                   Login
                 </button>
-              </>
+              </p>
             )}
-          </p>
+          </div>
         )}
 
         {mode === 'confirm' && (
-          <p style={{ textAlign: 'center', fontSize: '0.9rem' }}>
+          <p className="text-center text-sm">
             Didn't receive the code?{' '}
             <button
               onClick={() => setMode('signup')}
-              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline' }}
+              className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
             >
               Try again
             </button>
@@ -224,10 +211,10 @@ export default function AuthModal({ isOpen, onClose }) {
         )}
 
         {mode === 'forgot' && (
-          <p style={{ textAlign: 'center', fontSize: '0.9rem' }}>
+          <p className="text-center text-sm">
             <button
               onClick={() => setMode('login')}
-              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline' }}
+              className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
             >
               Back to login
             </button>

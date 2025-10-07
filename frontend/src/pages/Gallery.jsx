@@ -9,49 +9,35 @@ function Gallery() {
   }))
 
   return (
-    <div className="page">
-      <div className="card">
-        <h2 style={{ color: '#1e293b', marginBottom: '1.5rem' }}>Public Gallery</h2>
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="card p-6">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Public Gallery</h2>
         <input 
           type="text" 
           placeholder="Search by tags..." 
-          className="input" 
-          style={{ marginBottom: '2rem' }} 
+          className="input-field mb-8" 
         />
         
-        <div className="grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sampleImages.map((image) => (
-            <div key={image.id} className="card" style={{ padding: '1rem' }}>
+            <div key={image.id} className="card p-4">
               <LazyImage
                 src={image.url}
                 alt={image.prompt}
-                style={{ height: '150px', marginBottom: '0.75rem' }}
+                className="w-full h-40 object-cover rounded-lg mb-3"
               />
-              <p style={{ 
-                fontSize: '0.9rem', 
-                color: '#64748b', 
-                marginBottom: '0.75rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
+              <p className="text-sm text-gray-600 mb-3 overflow-hidden text-ellipsis">
                 {image.prompt}
               </p>
-              <button 
-                className="btn" 
-                style={{ 
-                  width: '100%', 
-                  fontSize: '0.85rem',
-                  padding: '0.5rem 1rem'
-                }}
-              >
+              <button className="btn-secondary w-full text-sm">
                 Download Free
               </button>
             </div>
           ))}
         </div>
         
-        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <button className="btn">Export Selected with Metadata ($0.10 each)</button>
+        <div className="mt-8 text-center">
+          <button className="btn-primary">Export Selected with Metadata ($0.10 each)</button>
         </div>
       </div>
     </div>

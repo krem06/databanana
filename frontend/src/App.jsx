@@ -5,15 +5,20 @@ import { ThemeProvider } from './ThemeContext'
 import AuthModal from './components/AuthModal'
 import PrivateRoute from './components/PrivateRoute'
 import ThemeToggle from './components/ThemeToggle'
+import PWAPrompt from './components/PWAPrompt'
 import Home from './pages/Home'
 import Gallery from './pages/Gallery'
 import Generate from './pages/Generate'
 import Account from './pages/Account'
+import { apiClient } from './api'
+import { useOffline } from './hooks/useOffline'
 
 function Navigation() {
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const { isAuthenticated, logout } = useAuth()
+  const [credits, setCredits] = useState(0)
+  const { isAuthenticated } = useAuth()
   const location = useLocation()
+  const { isOffline } = useOffline()
 
   // Auto-show login modal when redirected from private route
   useEffect(() => {
@@ -22,39 +27,75 @@ function Navigation() {
     }
   }, [location])
 
+  // Fetch user credits when authenticated
+  useEffect(() => {
+    const fetchCredits = async () => {
+      if (isAuthenticated) {
+        try {
+          const userData = await apiClient.getUser()
+          setCredits(userData.credits || 0)
+        } catch (error) {
+          console.error('Failed to fetch credits:', error)
+        }
+      } else {
+        setCredits(0)
+      }
+    }
+    
+    fetchCredits()
+  }, [isAuthenticated])
+
   const isActive = (path) => location.pathname === path
 
   return (
     <>
-      <nav className="nav">
-        <div className="nav-brand">
-          <img src="/src/assets/databanana-top.jpg" alt="Data Banana" className="logo" />
-          <span>databanana.ai</span>
-          {import.meta.env.VITE_TEST_MODE === 'true' && (
-            <span className="test-badge">TEST</span>
-          )}
-        </div>
-        <div className="nav-links">
-          <Link to="/" className={isActive('/') ? 'active' : ''}>Home</Link>
-          <Link to="/gallery" className={isActive('/gallery') ? 'active' : ''}>Gallery</Link>
-          {isAuthenticated && (
-            <>
-              <Link to="/generate" className={isActive('/generate') ? 'active' : ''}>Generate</Link>
-              <Link to="/account" className={isActive('/account') ? 'active' : ''}>Account</Link>
-            </>
-          )}
-          
-          <ThemeToggle />
-          
-          {isAuthenticated ? (
-            <button className="btn" style={{ marginLeft: '1rem' }} onClick={logout}>
-              Logout
-            </button>
-          ) : (
-            <button className="btn" style={{ marginLeft: '1rem' }} onClick={() => setShowAuthModal(true)}>
-              Login
-            </button>
-          )}
+      <nav className="nav-light border-b px-6 py-4">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <img src="/src/assets/databanana-top.jpg" alt="Data Banana" className="w-8 h-8 rounded" />
+            <span className="text-xl font-semibold text-manual">databanana.ai</span>
+            {import.meta.env.VITE_TEST_MODE === 'true' && (
+              <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">TEST</span>
+            )}
+          </div>
+          <div className="flex items-center gap-6">
+            <Link to="/" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Home</Link>
+            <Link to="/gallery" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/gallery') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Gallery</Link>
+            {isAuthenticated && (
+              <>
+                <Link to="/generate" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/generate') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Generate</Link>
+                <Link to="/account" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/account') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Account</Link>
+              </>
+            )}
+            
+            <ThemeToggle />
+            
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                {isOffline && (
+                  <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                    Offline
+                  </div>
+                )}
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  Credits: <span className="font-medium text-green-600 dark:text-green-400">${credits}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                {isOffline && (
+                  <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                    Offline
+                  </div>
+                )}
+                <button className="btn-primary" onClick={() => setShowAuthModal(true)}>
+                  Login
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -72,17 +113,17 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        Loading...
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg text-gray-600">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="app">
+    <div className="min-h-screen">
       <Navigation />
       
-      <main className="main">
+      <main className="">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
@@ -100,6 +141,7 @@ function App() {
       <AuthProvider>
         <Router>
           <AppContent />
+          <PWAPrompt />
         </Router>
       </AuthProvider>
     </ThemeProvider>

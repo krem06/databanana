@@ -5,33 +5,15 @@ function LazyImage({ src, alt, className, style }) {
   const [error, setError] = useState(false)
 
   return (
-    <div className={className} style={{ position: 'relative', ...style }}>
+    <div className={`relative ${className || ''}`} style={style}>
       {!loaded && !error && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#f1f5f9',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#64748b'
-        }}>
+        <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
           Loading...
         </div>
       )}
       
       {error ? (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#fef2f2',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#dc2626'
-        }}>
+        <div className="absolute inset-0 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
           Failed to load
         </div>
       ) : (
@@ -41,14 +23,9 @@ function LazyImage({ src, alt, className, style }) {
           loading="lazy"
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            borderRadius: '8px',
-            opacity: loaded ? 1 : 0,
-            transition: 'opacity 0.2s ease'
-          }}
+          className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          }`}
         />
       )}
     </div>
