@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import { useOffline } from '../hooks/useOffline'
+import ImageValidationGallery from '../components/ImageValidationGallery'
 
 function Generate() {
   const [context, setContext] = useState('')
@@ -9,8 +10,6 @@ function Generate() {
   const [generating, setGenerating] = useState(false)
   const [userCredits, setUserCredits] = useState(25.50)
   const [batches, setBatches] = useState([])
-  const [selectedImages, setSelectedImages] = useState(new Set())
-  const [rejectedImages, setRejectedImages] = useState(new Set())
   const [viewedImage, setViewedImage] = useState(null)
   const [zoomLevel, setZoomLevel] = useState(2)
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 })
@@ -20,6 +19,8 @@ function Generate() {
   const [activeDatasetName, setActiveDatasetName] = useState('')
   const { user } = useAuth()
   const { isOffline } = useOffline()
+  const validationRef = useRef()
+  const [validationState, setValidationState] = useState({ selectedImages: new Set(), rejectedImages: new Set() })
 
   useEffect(() => {
     if (user) {
@@ -28,14 +29,6 @@ function Generate() {
     }
   }, [user])
 
-  // Simple localStorage sync for validation state only
-  useEffect(() => {
-    localStorage.setItem('databanana_selected', JSON.stringify(Array.from(selectedImages)))
-  }, [selectedImages])
-
-  useEffect(() => {
-    localStorage.setItem('databanana_rejected', JSON.stringify(Array.from(rejectedImages)))
-  }, [rejectedImages])
 
   // Save form state including active dataset
   useEffect(() => {
@@ -50,18 +43,7 @@ function Generate() {
 
   const loadFromLocalStorage = () => {
     try {
-      // Load validation state
-      const savedSelected = localStorage.getItem('databanana_selected')
-      if (savedSelected) {
-        setSelectedImages(new Set(JSON.parse(savedSelected)))
-      }
-
-      const savedRejected = localStorage.getItem('databanana_rejected')
-      if (savedRejected) {
-        setRejectedImages(new Set(JSON.parse(savedRejected)))
-      }
-
-      // Load form state
+      // Load form state only (validation state handled by ImageValidationGallery component)
       const savedForm = localStorage.getItem('databanana_form')
       if (savedForm) {
         const formState = JSON.parse(savedForm)
@@ -148,35 +130,21 @@ function Generate() {
     }
   }
 
-  const toggleImageSelection = (imageId) => {
-    setSelectedImages(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(imageId)) {
-        newSet.delete(imageId)
-      } else {
-        newSet.add(imageId)
+
+
+
+  const handleSaveDataset = (dataset) => {
+    // Save the current session as a permanent dataset
+    const result = confirm(`Save current session as a permanent dataset?\n\nThis will save ${dataset.batches.length} batches with ${dataset.batches.reduce((total, batch) => total + batch.images.length, 0)} total images.`)
+    
+    if (result) {
+      try {
+        // TODO: Implement actual save to backend
+        alert(`✅ Dataset "${dataset.name}" saved successfully!`)
+      } catch (error) {
+        alert(`❌ Failed to save dataset: ${error.message}`)
       }
-      return newSet
-    })
-  }
-
-  const toggleBatch = (batchId) => {
-    setBatches(prev => prev.map(batch => 
-      batch.id === batchId ? { ...batch, isOpen: !batch.isOpen } : batch
-    ))
-  }
-
-  const getSelectedCountForBatch = (batchImages) => {
-    return batchImages.filter(img => selectedImages.has(img.id)).length
-  }
-
-  const getRejectedCountForBatch = (batchImages) => {
-    return batchImages.filter(img => rejectedImages.has(img.id)).length
-  }
-
-  const clearValidationData = () => {
-    localStorage.removeItem('databanana_selected')
-    localStorage.removeItem('databanana_rejected')
+    }
   }
 
   const resetForm = () => {
@@ -188,22 +156,22 @@ function Generate() {
   }
 
   const handleExport = async () => {
-    if (selectedImages.size === 0) {
+    if (validationState.selectedImages.size === 0) {
       alert('Please select at least one image to export')
       return
     }
     
-    const result = confirm(`🎉 Export ${selectedImages.size} images as COCO dataset?\n\nCost: $${(selectedImages.size * 0.10).toFixed(2)}\n\nClick OK to export and clear your workspace, or Cancel to keep working.`)
+    const result = confirm(`🎉 Export ${validationState.selectedImages.size} images as COCO dataset?\n\nCost: $${(validationState.selectedImages.size * 0.10).toFixed(2)}\n\nClick OK to export and clear your workspace, or Cancel to keep working.`)
     
     if (result) {
       // Simulate export
-      alert(`✅ Export Success!\n\n${selectedImages.size} images exported as COCO dataset.\nDownload link: https://example.com/dataset.zip`)
+      alert(`✅ Export Success!\n\n${validationState.selectedImages.size} images exported as COCO dataset.\nDownload link: https://example.com/dataset.zip`)
       
       // Clear workspace after successful export
       setBatches([])
-      setSelectedImages(new Set())
-      setRejectedImages(new Set())
-      clearValidationData()
+      if (validationRef.current) {
+        validationRef.current.clearValidation()
+      }
     }
   }
 
@@ -243,22 +211,16 @@ function Generate() {
   }
 
   const handleAccept = () => {
-    if (!selectedImages.has(viewedImage.id)) {
-      toggleImageSelection(viewedImage.id)
+    if (validationRef.current && !validationState.selectedImages.has(viewedImage.id)) {
+      validationRef.current.toggleImageSelection(viewedImage.id)
     }
-    setRejectedImages(prev => {
-      const newSet = new Set(prev)
-      newSet.delete(viewedImage.id)
-      return newSet
-    })
     setTimeout(goToNextImage, 300)
   }
 
   const handleReject = () => {
-    if (selectedImages.has(viewedImage.id)) {
-      toggleImageSelection(viewedImage.id)
+    if (validationRef.current && !validationState.rejectedImages.has(viewedImage.id)) {
+      validationRef.current.toggleImageRejection(viewedImage.id)
     }
-    setRejectedImages(prev => new Set(prev).add(viewedImage.id))
     setTimeout(goToNextImage, 300)
   }
 
@@ -375,76 +337,24 @@ function Generate() {
           </div>
         </div>
 
-        {/* Batches */}
-        {batches.map((batch, batchIndex) => (
-          <div key={batch.id} className="card mb-8 overflow-hidden">
-            {/* Batch Header */}
-            <div 
-              className={`p-6 cursor-pointer transition-colors ${batch.isOpen ? 'bg-blue-50 border-b border-blue-100' : 'hover:bg-gray-50'}`}
-              onClick={() => toggleBatch(batch.id)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">Batch {batches.length - batchIndex}</h3>
-                  <p className="text-sm text-gray-600">{batch.context}</p>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-green-600 font-medium">✓{getSelectedCountForBatch(batch.images)}</span>
-                  <span className="text-red-500 font-medium">✗{getRejectedCountForBatch(batch.images)}</span>
-                  <span className="text-gray-500">/{batch.images.length}</span>
-                  <span className="font-medium">${batch.cost.toFixed(2)}</span>
-                  <span className="text-gray-400">{batch.isOpen ? '▼' : '▶'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Batch Content */}
-            {batch.isOpen && (
-              <div className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {batch.images.map((image) => (
-                    <div 
-                      key={image.id} 
-                      className={`group relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                        selectedImages.has(image.id) 
-                          ? 'ring-4 ring-green-500 ring-opacity-50' 
-                          : rejectedImages.has(image.id)
-                          ? 'ring-4 ring-red-500 ring-opacity-50 opacity-60'
-                          : 'hover:shadow-lg'
-                      }`}
-                      onClick={() => openImageModal(image)}
-                    >
-                      <img 
-                        src={image.url} 
-                        alt={image.prompt}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <div className="bg-white bg-opacity-90 rounded-full p-2">
-                            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                      {(selectedImages.has(image.id) || rejectedImages.has(image.id)) && (
-                        <div className="absolute top-2 right-2">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                            selectedImages.has(image.id) ? 'bg-green-500' : 'bg-red-500'
-                          }`}>
-                            {selectedImages.has(image.id) ? '✓' : '✗'}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* Image Gallery */}
+        {batches.length > 0 && (
+          <div className="card p-6">
+            <ImageValidationGallery
+              datasets={[{ 
+                id: 'current-session', 
+                name: activeDatasetName || 'Current Session',
+                created_at: new Date().toISOString(),
+                batches: batches
+              }]}
+              showDatasetHeaders={true}
+              onSelectionChange={setValidationState}
+              exposeValidationMethods={validationRef}
+              onImageClick={openImageModal}
+              onSaveDataset={handleSaveDataset}
+            />
           </div>
-        ))}
+        )}
 
         {/* Export Summary */}
         {batches.length > 0 && (
@@ -455,25 +365,25 @@ function Generate() {
                   <span className="font-medium">Total Images:</span> {batches.reduce((total, batch) => total + batch.images.length, 0)}
                 </div>
                 <div className="text-sm text-green-600">
-                  <span className="font-medium">Selected:</span> {selectedImages.size}
+                  <span className="font-medium">Selected:</span> {validationState.selectedImages.size}
                 </div>
                 <div className="text-sm text-red-500">
-                  <span className="font-medium">Rejected:</span> {rejectedImages.size}
+                  <span className="font-medium">Rejected:</span> {validationState.rejectedImages.size}
                 </div>
                 <div className="text-sm text-gray-600">
-                  <span className="font-medium">Export Cost:</span> ${(selectedImages.size * 0.10).toFixed(2)}
+                  <span className="font-medium">Export Cost:</span> ${(validationState.selectedImages.size * 0.10).toFixed(2)}
                 </div>
               </div>
               <button 
                 onClick={handleExport} 
-                disabled={selectedImages.size === 0}
+                disabled={validationState.selectedImages.size === 0}
                 className={`font-medium px-6 py-3 rounded-lg transition-colors ${
-                  selectedImages.size > 0 
+                  validationState.selectedImages.size > 0 
                     ? 'bg-green-600 hover:bg-green-700 text-white' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Export {selectedImages.size} Images
+                Export {validationState.selectedImages.size} Images
               </button>
             </div>
           </div>
