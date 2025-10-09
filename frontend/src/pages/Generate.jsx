@@ -1,49 +1,79 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import { useOffline } from '../hooks/useOffline'
+import { apiClient } from '../api'
 import ImageValidationGallery from '../components/ImageValidationGallery'
 
 function Generate() {
+  // Form state
   const [context, setContext] = useState('')
   const [excludeTags, setExcludeTags] = useState('')
-  const [imageCount, setImageCount] = useState(10)
+  const [imageCount, setImageCount] = useState()
+  const [activeDatasetName, setActiveDatasetName] = useState('')
+  
+  // Generation state
   const [generating, setGenerating] = useState(false)
-  const [userCredits, setUserCredits] = useState(25.50)
+  const [userCredits, setUserCredits] = useState()
   const [batches, setBatches] = useState([])
+  
+  // Modal state
   const [viewedImage, setViewedImage] = useState(null)
   const [zoomLevel, setZoomLevel] = useState(2)
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  // Simple active dataset tracking
-  const [activeDatasetName, setActiveDatasetName] = useState('')
+  
+  // Validation state
+  const [validationState, setValidationState] = useState({ 
+    selectedImages: new Set(), 
+    rejectedImages: new Set() 
+  })
+  
   const { user } = useAuth()
   const { isOffline } = useOffline()
   const validationRef = useRef()
-  const [validationState, setValidationState] = useState({ selectedImages: new Set(), rejectedImages: new Set() })
 
   useEffect(() => {
+    loadFromLocalStorage()
     if (user) {
       fetchUserData()
-      loadFromLocalStorage()
     }
   }, [user])
 
-
-  // Save form state including active dataset
+  // Auto-save form state, batches, and validation state (with throttling)
   useEffect(() => {
-    const formState = { context, excludeTags, imageCount, activeDatasetName }
-    localStorage.setItem('databanana_form', JSON.stringify(formState))
-  }, [context, excludeTags, imageCount, activeDatasetName])
+    const timeoutId = setTimeout(() => {
+      const formState = { 
+        context, 
+        excludeTags, 
+        imageCount, 
+        activeDatasetName,
+        batches,
+        userCredits,
+        validationState: {
+          selectedImages: Array.from(validationState.selectedImages),
+          rejectedImages: Array.from(validationState.rejectedImages)
+        },
+        savedAt: new Date().toISOString()
+      }
+      localStorage.setItem('databanana_form', JSON.stringify(formState))
+    }, 500) // Throttle saves
 
+    return () => clearTimeout(timeoutId)
+  }, [context, excludeTags, imageCount, activeDatasetName, batches, userCredits, validationState])
 
   const fetchUserData = async () => {
-    setUserCredits(25.50) // Mock credits
+    try {
+      const userData = await apiClient.getUser()
+      setUserCredits(userData.credits)
+    } catch (error) {
+      console.error('Failed to fetch user data:', error)
+      setUserCredits(25.50) // Fallback
+    }
   }
 
   const loadFromLocalStorage = () => {
     try {
-      // Load form state only (validation state handled by ImageValidationGallery component)
       const savedForm = localStorage.getItem('databanana_form')
       if (savedForm) {
         const formState = JSON.parse(savedForm)
@@ -51,29 +81,27 @@ function Generate() {
         setExcludeTags(formState.excludeTags || '')
         setImageCount(formState.imageCount || 10)
         setActiveDatasetName(formState.activeDatasetName || '')
+        setBatches(formState.batches || [])
+        if (formState.userCredits !== undefined) {
+          setUserCredits(formState.userCredits)
+        }
+        
+        // Restore validation state
+        if (formState.validationState) {
+          setValidationState({
+            selectedImages: new Set(formState.validationState.selectedImages || []),
+            rejectedImages: new Set(formState.validationState.rejectedImages || [])
+          })
+        }
       }
     } catch (error) {
       console.error('Error loading from localStorage:', error)
-      localStorage.clear() // Simple cleanup
     }
   }
 
-  const generateMockImages = (count) => {
-    return Array.from({ length: count }, (_, i) => ({
-      id: `img_${Date.now()}_${i}`,
-      prompt: `${context} - variation ${i + 1}: A ${['orange', 'black', 'white', 'gray', 'calico'][i % 5]} cat ${['sitting', 'lying', 'perched', 'resting'][i % 4]} on a ${['windowsill', 'wooden sill', 'marble ledge'][i % 3]}`,
-      url: `https://picsum.photos/400/300?random=${Date.now() + i}`,
-      tags: ['generated', 'mock']
-    }))
-  }
 
-  const calculateCost = () => {
-    return (imageCount * 0.05).toFixed(2)
-  }
-
-  const canAfford = () => {
-    return userCredits >= parseFloat(calculateCost())
-  }
+  const calculateCost = () => (imageCount * 0.05).toFixed(2)
+  const canAfford = () => userCredits >= parseFloat(calculateCost())
 
   const handleGenerate = async () => {
     if (context.length < 10) {
@@ -91,7 +119,7 @@ function Generate() {
       return
     }
 
-    // If no active dataset, prompt user for name
+    // Prompt for dataset name if not set
     if (!activeDatasetName.trim()) {
       const userDatasetName = prompt('Enter a name for your dataset:', `Dataset: ${context.slice(0, 30)}`)
       if (!userDatasetName) return
@@ -99,48 +127,60 @@ function Generate() {
     }
 
     setGenerating(true)
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
+
     try {
-      const mockImages = generateMockImages(imageCount)
-      const cost = parseFloat(calculateCost())
+      // Call the real API
+      const response = await apiClient.generateBatch(context, excludeTags, imageCount)
       
       const newBatch = {
-        id: `batch_${Date.now()}`,
-        images: mockImages,
+        id: response.batch_id || `batch_${Date.now()}`,
+        images: response.images || [],
         context,
         excludeTags,
-        cost,
-        timestamp: new Date(),
-        isOpen: true,
+        cost: response.cost || parseFloat(calculateCost()),
+        timestamp: new Date(response.timestamp || Date.now()),
         datasetName: activeDatasetName
       }
       
-      setBatches(prev => [
-        newBatch,
-        ...prev.map(batch => ({ ...batch, isOpen: false }))
-      ])
-      
-      setUserCredits(prev => prev - cost)
+      setBatches(prev => [newBatch, ...prev])
+      setUserCredits(prev => prev - (response.cost || parseFloat(calculateCost())))
     } catch (error) {
       console.error('Error generating batch:', error)
-      alert('Error generating images. Please try again.')
+      alert(`Error generating images: ${error.message}. Please try again.`)
     } finally {
       setGenerating(false)
     }
   }
 
-
-
-
   const handleSaveDataset = (dataset) => {
-    // Save the current session as a permanent dataset
-    const result = confirm(`Save current session as a permanent dataset?\n\nThis will save ${dataset.batches.length} batches with ${dataset.batches.reduce((total, batch) => total + batch.images.length, 0)} total images.`)
+    const totalImages = dataset.batches.reduce((total, batch) => total + batch.images.length, 0)
+    const selectedCount = validationState.selectedImages.size
+    const rejectedCount = validationState.rejectedImages.size
+    
+    const result = confirm(`Save current session as a permanent dataset?\n\nDataset: ${dataset.name}\nBatches: ${dataset.batches.length}\nTotal Images: ${totalImages}\nSelected: ${selectedCount}\nRejected: ${rejectedCount}\n\nThis will save all batches with their current validation state.`)
     
     if (result) {
       try {
+        const datasetToSave = {
+          ...dataset,
+          batches: dataset.batches.map(batch => ({
+            ...batch,
+            images: batch.images.map(image => ({
+              ...image,
+              selected: validationState.selectedImages.has(image.id),
+              rejected: validationState.rejectedImages.has(image.id)
+            }))
+          })),
+          validationState: {
+            selectedImages: Array.from(validationState.selectedImages),
+            rejectedImages: Array.from(validationState.rejectedImages)
+          },
+          savedAt: new Date().toISOString()
+        }
+        
         // TODO: Implement actual save to backend
-        alert(`✅ Dataset "${dataset.name}" saved successfully!`)
+        console.log('Saving dataset:', datasetToSave)
+        alert(`✅ Dataset "${dataset.name}" saved successfully!\n\nSaved ${selectedCount} selected and ${rejectedCount} rejected images.`)
       } catch (error) {
         alert(`❌ Failed to save dataset: ${error.message}`)
       }
@@ -151,7 +191,12 @@ function Generate() {
     setContext('')
     setExcludeTags('')
     setImageCount(10)
-    setActiveDatasetName('')  // Reset active dataset
+    setActiveDatasetName('')
+    setBatches([])
+    setValidationState({ selectedImages: new Set(), rejectedImages: new Set() })
+    if (validationRef.current) {
+      validationRef.current.clearValidation()
+    }
     localStorage.removeItem('databanana_form')
   }
 
@@ -164,18 +209,19 @@ function Generate() {
     const result = confirm(`🎉 Export ${validationState.selectedImages.size} images as COCO dataset?\n\nCost: $${(validationState.selectedImages.size * 0.10).toFixed(2)}\n\nClick OK to export and clear your workspace, or Cancel to keep working.`)
     
     if (result) {
-      // Simulate export
+      // TODO: Implement actual export
       alert(`✅ Export Success!\n\n${validationState.selectedImages.size} images exported as COCO dataset.\nDownload link: https://example.com/dataset.zip`)
       
-      // Clear workspace after successful export
       setBatches([])
+      setActiveDatasetName('')
+      setValidationState({ selectedImages: new Set(), rejectedImages: new Set() })
       if (validationRef.current) {
         validationRef.current.clearValidation()
       }
     }
   }
 
-  // Zoom Modal Functions
+  // Modal functions
   const openImageModal = (image) => {
     setViewedImage(image)
     setZoomLevel(2)
@@ -187,14 +233,11 @@ function Generate() {
     setIsDragging(false)
   }
 
-  const getAllImages = () => {
-    return batches.flatMap(batch => batch.images)
-  }
+  const getAllImages = () => batches.flatMap(batch => batch.images)
 
   const getCurrentImageIndex = () => {
     if (!viewedImage) return -1
-    const allImages = getAllImages()
-    return allImages.findIndex(img => img.id === viewedImage.id)
+    return getAllImages().findIndex(img => img.id === viewedImage.id)
   }
 
   const goToNextImage = () => {
@@ -224,6 +267,7 @@ function Generate() {
     setTimeout(goToNextImage, 300)
   }
 
+  // Modal drag handlers
   const handleMouseDown = (e) => {
     setIsDragging(true)
     setDragStart({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y })
@@ -237,9 +281,7 @@ function Generate() {
     })
   }
 
-  const handleMouseUp = () => {
-    setIsDragging(false)
-  }
+  const handleMouseUp = () => setIsDragging(false)
 
   const handleWheel = (e) => {
     e.preventDefault()
@@ -250,11 +292,11 @@ function Generate() {
   return (
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto p-6">
-        {/* Compact Header */}
-        <div className="card-manual p-4 mb-6">
+        {/* Generation Form */}
+        <div className="card p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold text-manual">Generate</h1>
+              <h1 className="text-xl font-semibold">Generate</h1>
               {activeDatasetName && (
                 <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                   📁 {activeDatasetName}
@@ -266,7 +308,9 @@ function Generate() {
                 </span>
               )}
             </div>
-            <span className="text-sm text-gray-600">Credits: <span className="font-medium text-blue-600">${userCredits.toFixed(2)}</span></span>
+            <span className="text-sm text-gray-600">
+              Credits: <span className="font-medium text-blue-600">${userCredits.toFixed(2)}</span>
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
@@ -277,7 +321,7 @@ function Generate() {
                 onChange={(e) => setContext(e.target.value.slice(0, 80))}
                 placeholder="Scene description (e.g., cat on windowsill)..."
                 maxLength={80}
-                className="input-manual text-sm"
+                className="input-field text-sm w-full"
               />
             </div>
             <div>
@@ -286,7 +330,7 @@ function Generate() {
                 value={excludeTags}
                 onChange={(e) => setExcludeTags(e.target.value)}
                 placeholder="Exclude tags..."
-                className="input-manual text-sm"
+                className="input-field text-sm w-full"
               />
             </div>
             <div>
@@ -296,7 +340,7 @@ function Generate() {
                 onChange={(e) => setImageCount(Math.min(Math.max(1, parseInt(e.target.value) || 1), 50))}
                 min="1"
                 max="50"
-                className="input-field text-center text-sm"
+                className="input-field text-center text-sm w-full"
                 placeholder="Count"
               />
             </div>
@@ -304,34 +348,31 @@ function Generate() {
 
           <div className="flex items-center justify-between">
             <div className="text-xs text-gray-500">
-              {context.length}/80 chars • Cost: ${calculateCost()} • {canAfford() ? <span className="text-green-600">✓</span> : <span className="text-red-600">✗ Insufficient</span>}
+              {context.length}/80 chars • Cost: ${calculateCost()} • 
+              {canAfford() ? 
+                <span className="text-green-600"> ✓ Sufficient</span> : 
+                <span className="text-red-600"> ✗ Insufficient</span>
+              }
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex gap-2">
-                {activeDatasetName && (
-                  <button 
-                    onClick={() => {
-                      alert(`Dataset "${activeDatasetName}" exported successfully!`)
-                      setActiveDatasetName('')
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 hover:bg-blue-50 rounded"
-                  >
-                    Export Dataset
-                  </button>
-                )}
-                <button 
-                  onClick={resetForm}
-                  className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 hover:bg-gray-100 rounded"
-                >
-                  Reset
-                </button>
-              </div>
+              <button 
+                onClick={resetForm}
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 hover:bg-gray-100 rounded"
+              >
+                Reset
+              </button>
               <button 
                 onClick={handleGenerate}
                 disabled={generating || context.length < 10 || isOffline || !canAfford()}
-                className={`text-sm px-4 py-2 ${isOffline ? 'bg-gray-400 text-gray-600 cursor-not-allowed' : 'btn-primary'}`}
+                className={`text-sm px-4 py-2 rounded ${
+                  generating || context.length < 10 || isOffline || !canAfford()
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                    : 'btn-primary'
+                }`}
               >
-                {generating ? 'Generating...' : isOffline ? 'Offline - Cannot Generate' : `Generate ${imageCount}`}
+                {generating ? 'Generating...' : 
+                 isOffline ? 'Offline - Cannot Generate' : 
+                 `Generate ${imageCount}`}
               </button>
             </div>
           </div>
@@ -352,6 +393,7 @@ function Generate() {
               exposeValidationMethods={validationRef}
               onImageClick={openImageModal}
               onSaveDataset={handleSaveDataset}
+              initialValidationState={validationState}
             />
           </div>
         )}
@@ -391,10 +433,10 @@ function Generate() {
 
         {/* Empty State */}
         {batches.length === 0 && !generating && (
-          <div className="card-manual p-16 text-center bg-gray-400 dark:bg-gray-700 border-b">
+          <div className="card p-16 text-center">
             <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2v12a2 2 0 002 2z" />
               </svg>
             </div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ready to generate your dataset?</h3>
@@ -421,7 +463,7 @@ function Generate() {
         )}
       </div>
 
-      {/* Zoom Modal */}
+      {/* Image Modal */}
       {viewedImage && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center"

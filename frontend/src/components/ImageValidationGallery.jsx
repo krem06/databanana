@@ -4,51 +4,55 @@ function ImageValidationGallery({
   datasets = [], 
   showDatasetHeaders = true,
   className = "",
-  onSelectionChange = () => {}, // Optional callback for parent components
-  exposeValidationMethods = null, // Optional ref to expose validation methods
-  onImageClick = null, // Optional custom click handler - if provided, overrides default selection behavior
-  onSaveDataset = null // Optional save handler for datasets
+  onSelectionChange = () => {},
+  exposeValidationMethods = null,
+  onImageClick = null,
+  onSaveDataset = null,
+  initialValidationState = null
 }) {
   const [expandedDatasets, setExpandedDatasets] = useState(new Set())
   const [expandedBatches, setExpandedBatches] = useState(() => {
-    // Auto-expand the first batch (latest) if there are datasets
-    if (datasets.length > 0 && datasets[0].batches.length > 0) {
+    // Auto-expand first batch of first dataset
+    if (datasets.length > 0 && datasets[0].batches?.length > 0) {
       return new Set([datasets[0].batches[0].id])
     }
     return new Set()
   })
-  const [selectedImages, setSelectedImages] = useState(new Set())
-  const [rejectedImages, setRejectedImages] = useState(new Set())
-
-  // Load validation state from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedSelected = localStorage.getItem('databanana_selected')
-      if (savedSelected) {
-        setSelectedImages(new Set(JSON.parse(savedSelected)))
-      }
-
-      const savedRejected = localStorage.getItem('databanana_rejected')
-      if (savedRejected) {
-        setRejectedImages(new Set(JSON.parse(savedRejected)))
-      }
-    } catch (error) {
-      console.error('Error loading validation state:', error)
+  const [selectedImages, setSelectedImages] = useState(() => {
+    // Use initial state if provided, otherwise load from localStorage
+    if (initialValidationState) {
+      return initialValidationState.selectedImages
     }
-  }, [])
+    try {
+      const saved = localStorage.getItem('databanana_selected')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+  
+  const [rejectedImages, setRejectedImages] = useState(() => {
+    // Use initial state if provided, otherwise load from localStorage  
+    if (initialValidationState) {
+      return initialValidationState.rejectedImages
+    }
+    try {
+      const saved = localStorage.getItem('databanana_rejected')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
 
-  // Save validation state to localStorage whenever it changes
+
+  // Save validation state and notify parent
   useEffect(() => {
     localStorage.setItem('databanana_selected', JSON.stringify(Array.from(selectedImages)))
-    onSelectionChange({ selectedImages, rejectedImages })
-  }, [selectedImages, onSelectionChange])
-
-  useEffect(() => {
     localStorage.setItem('databanana_rejected', JSON.stringify(Array.from(rejectedImages)))
     onSelectionChange({ selectedImages, rejectedImages })
-  }, [rejectedImages, selectedImages, onSelectionChange])
+  }, [selectedImages, rejectedImages, onSelectionChange])
 
-  // Expose validation methods to parent if requested
+  // Expose methods to parent component
   useEffect(() => {
     if (exposeValidationMethods) {
       exposeValidationMethods.current = {
@@ -59,54 +63,25 @@ function ImageValidationGallery({
           setRejectedImages(new Set())
           localStorage.removeItem('databanana_selected')
           localStorage.removeItem('databanana_rejected')
-        },
-        selectedImages,
-        rejectedImages
+        }
       }
     }
-  }, [exposeValidationMethods, selectedImages, rejectedImages])
+  }, [selectedImages, rejectedImages, exposeValidationMethods])
 
-  const toggleDataset = (datasetId) => {
-    setExpandedDatasets(prev => {
+  const toggleSet = (setState, id) => {
+    setState(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(datasetId)) {
-        newSet.delete(datasetId)
+      if (newSet.has(id)) {
+        newSet.delete(id)
       } else {
-        newSet.add(datasetId)
+        newSet.add(id)
       }
       return newSet
     })
   }
 
-  const toggleBatch = (batchId) => {
-    setExpandedBatches(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(batchId)) {
-        newSet.delete(batchId)
-      } else {
-        newSet.add(batchId)
-      }
-      return newSet
-    })
-  }
-
-  const getSelectedCountForBatch = (batchImages) => {
-    return batchImages.filter(img => selectedImages.has(img.id)).length
-  }
-
-  const getRejectedCountForBatch = (batchImages) => {
-    return batchImages.filter(img => rejectedImages.has(img.id)).length
-  }
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+  const toggleDataset = (datasetId) => toggleSet(setExpandedDatasets, datasetId)
+  const toggleBatch = (batchId) => toggleSet(setExpandedBatches, batchId)
 
   const toggleImageSelection = (imageId) => {
     setSelectedImages(prev => {
@@ -115,7 +90,6 @@ function ImageValidationGallery({
         newSet.delete(imageId)
       } else {
         newSet.add(imageId)
-        // Remove from rejected when selecting
         setRejectedImages(prevRejected => {
           const newRejected = new Set(prevRejected)
           newRejected.delete(imageId)
@@ -133,7 +107,6 @@ function ImageValidationGallery({
         newSet.delete(imageId)
       } else {
         newSet.add(imageId)
-        // Remove from selected when rejecting
         setSelectedImages(prevSelected => {
           const newSelected = new Set(prevSelected)
           newSelected.delete(imageId)
@@ -144,18 +117,29 @@ function ImageValidationGallery({
     })
   }
 
-  const handleImageClick = (imageId, event, imageData = null) => {
+  const handleImageClick = (imageId, event, imageData) => {
     if (onImageClick) {
-      // Use custom click handler if provided
-      onImageClick(imageData || { id: imageId }, event)
+      onImageClick(imageData, event)
+    } else if (event.shiftKey) {
+      toggleImageRejection(imageId)
     } else {
-      // Default behavior
-      if (event.shiftKey) {
-        toggleImageRejection(imageId)
-      } else {
-        toggleImageSelection(imageId)
-      }
+      toggleImageSelection(imageId)
     }
+  }
+
+  const getImageCounts = (images) => ({
+    selected: images.filter(img => selectedImages.has(img.id)).length,
+    rejected: images.filter(img => rejectedImages.has(img.id)).length
+  })
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   if (datasets.length === 0) {
@@ -175,12 +159,9 @@ function ImageValidationGallery({
     <div className={`space-y-8 ${className}`}>
       {datasets.map((dataset) => {
         const isExpanded = expandedDatasets.has(dataset.id)
-        const totalImagesInDataset = dataset.batches.reduce((sum, batch) => sum + batch.images.length, 0)
-        const totalSelectedInDataset = dataset.batches.reduce((sum, batch) => 
-          sum + getSelectedCountForBatch(batch.images), 0)
-        const totalRejectedInDataset = dataset.batches.reduce((sum, batch) => 
-          sum + getRejectedCountForBatch(batch.images), 0)
-        const totalCostInDataset = dataset.batches.reduce((sum, batch) => sum + batch.cost, 0)
+        const allImages = dataset.batches.flatMap(batch => batch.images)
+        const totalCounts = getImageCounts(allImages)
+        const totalCost = dataset.batches.reduce((sum, batch) => sum + batch.cost, 0)
         
         return (
           <div key={dataset.id} className="border border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden">
@@ -201,16 +182,16 @@ function ImageValidationGallery({
                   </div>
                   <div className="flex items-center gap-6 text-sm">
                     <span className="text-green-600 dark:text-green-400 font-medium">
-                      ✓{totalSelectedInDataset} selected
+                      ✓{totalCounts.selected} selected
                     </span>
                     <span className="text-red-500 dark:text-red-400 font-medium">
-                      ✗{totalRejectedInDataset} rejected
+                      ✗{totalCounts.rejected} rejected
                     </span>
                     <span className="text-gray-600 dark:text-gray-300">
-                      {totalImagesInDataset} total images
+                      {allImages.length} total images
                     </span>
                     <span className="font-semibold text-gray-900 dark:text-white">
-                      ${totalCostInDataset.toFixed(2)}
+                      ${totalCost.toFixed(2)}
                     </span>
                     {onSaveDataset && (
                       <button
@@ -235,6 +216,8 @@ function ImageValidationGallery({
             <div className={`space-y-0 ${showDatasetHeaders && !isExpanded ? 'hidden' : ''}`}>
               {dataset.batches.map((batch, batchIndex) => {
                 const isBatchExpanded = expandedBatches.has(batch.id)
+                const batchCounts = getImageCounts(batch.images)
+                
                 return (
                   <div key={batch.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                     {/* Batch Header */}
@@ -260,10 +243,10 @@ function ImageValidationGallery({
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           <span className="text-green-600 dark:text-green-400 font-medium">
-                            ✓{getSelectedCountForBatch(batch.images)} selected
+                            ✓{batchCounts.selected} selected
                           </span>
                           <span className="text-red-500 dark:text-red-400 font-medium">
-                            ✗{getRejectedCountForBatch(batch.images)} rejected
+                            ✗{batchCounts.rejected} rejected
                           </span>
                           <span className="text-gray-500 dark:text-gray-400">
                             {batch.images.length} total
@@ -282,46 +265,51 @@ function ImageValidationGallery({
                     {isBatchExpanded && (
                       <div className="p-6">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                          {batch.images.map((image) => (
-                        <div 
-                          key={image.id}
-                          className={`relative rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-105 ${
-                            selectedImages.has(image.id) 
-                              ? 'ring-2 ring-green-500' 
-                              : rejectedImages.has(image.id)
-                              ? 'ring-2 ring-red-500 opacity-60'
-                              : 'hover:ring-2 hover:ring-blue-300'
-                          }`}
-                          onClick={(e) => handleImageClick(image.id, e, image)}
-                          title={onImageClick ? "Click to view" : "Click to select • Shift+Click to reject"}
-                        >
-                          <img 
-                            src={image.url} 
-                            alt={image.prompt}
-                            className="w-full h-32 object-cover"
-                          />
-                          
-                          {/* Selection/Rejection badges */}
-                          {(selectedImages.has(image.id) || rejectedImages.has(image.id)) && (
-                            <div className="absolute top-2 right-2">
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                selectedImages.has(image.id) ? 'bg-green-500' : 'bg-red-500'
-                              }`}>
-                                {selectedImages.has(image.id) ? '✓' : '✗'}
+                          {batch.images.map((image) => {
+                            const isSelected = selectedImages.has(image.id)
+                            const isRejected = rejectedImages.has(image.id)
+                            
+                            return (
+                              <div 
+                                key={image.id}
+                                className={`relative rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-105 ${
+                                  isSelected 
+                                    ? 'ring-2 ring-green-500' 
+                                    : isRejected
+                                    ? 'ring-2 ring-red-500 opacity-60'
+                                    : 'hover:ring-2 hover:ring-blue-300'
+                                }`}
+                                onClick={(e) => handleImageClick(image.id, e, image)}
+                                title={onImageClick ? "Click to view" : "Click to select • Shift+Click to reject"}
+                              >
+                                <img 
+                                  src={image.url} 
+                                  alt={image.prompt}
+                                  className="w-full h-32 object-cover"
+                                />
+                                
+                                {/* Selection/Rejection badge */}
+                                {(isSelected || isRejected) && (
+                                  <div className="absolute top-2 right-2">
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                                      isSelected ? 'bg-green-500' : 'bg-red-500'
+                                    }`}>
+                                      {isSelected ? '✓' : '✗'}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Hover overlay */}
+                                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
+                                  <div className="opacity-0 hover:opacity-100 transition-opacity duration-200">
+                                    <div className="bg-white bg-opacity-90 rounded-full p-1 text-gray-700 text-xs">
+                                      {isSelected ? 'Selected' : isRejected ? 'Rejected' : 'Click to select'}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          )}
-                          
-                          {/* Hover overlay */}
-                          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                            <div className="opacity-0 hover:opacity-100 transition-opacity duration-200">
-                              <div className="bg-white bg-opacity-90 rounded-full p-1 text-gray-700 text-xs">
-                                {selectedImages.has(image.id) ? 'Selected' : rejectedImages.has(image.id) ? 'Rejected' : 'Click to select'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}

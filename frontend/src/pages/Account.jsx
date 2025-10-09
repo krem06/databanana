@@ -28,6 +28,16 @@ function Account() {
 
   const userEmail = user?.signInDetails?.loginId || 'Not logged in'
 
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   // Fetch user credits from backend
   const fetchUserCredits = async () => {
     try {
@@ -59,7 +69,7 @@ function Account() {
   useEffect(() => {
     fetchUserCredits()
     loadDatasets()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle payment success/cancel from URL (run once on mount)
   useEffect(() => {

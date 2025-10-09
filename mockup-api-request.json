@@ -1,0 +1,32 @@
+{
+  "endpoint": "POST /generate",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+  },
+  "request_body": {
+    "context": "cat sitting on a windowsill looking outside during golden hour",
+    "exclude_tags": "indoor, dark, night",
+    "image_count": 10
+  },
+  "expected_response": {
+    "batch_id": "batch_1731234567890",
+    "cost": 0.50,
+    "timestamp": "2024-11-10T14:30:00.000Z",
+    "images": [
+      {
+        "id": "img_1731234567890_0",
+        "url": "https://databanana-generated-images.s3.amazonaws.com/batch_1731234567890/img_0.jpg",
+        "prompt": "A orange cat sitting on a windowsill looking outside during golden hour",
+        "tags": ["cat", "windowsill", "golden hour", "outdoor view"]
+      },
+      {
+        "id": "img_1731234567890_1", 
+        "url": "https://databanana-generated-images.s3.amazonaws.com/batch_1731234567890/img_1.jpg",
+        "prompt": "A black cat sitting on a windowsill looking outside during golden hour",
+        "tags": ["cat", "windowsill", "golden hour", "outdoor view"]
+      }
+    ]
+  },
+  "test_curl_command": "curl -X POST https://your-api-gateway-url.amazonaws.com/generate \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n  -d '{\n    \"context\": \"cat sitting on a windowsill looking outside during golden hour\",\n    \"exclude_tags\": \"indoor, dark, night\", \n    \"image_count\": 10\n  }'"
+}
