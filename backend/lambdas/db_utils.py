@@ -44,10 +44,48 @@ def get_user_db_id(cognito_id: str, email: str = '') -> Optional[int]:
 
 def get_cognito_user_id(event) -> str:
     """Extract Cognito user ID from Lambda event"""
-    return event['requestContext']['authorizer']['claims']['sub']
+    # Try authorizer claims first (API Gateway with Cognito User Pool)
+    try:
+        return event['requestContext']['authorizer']['claims']['sub']
+    except KeyError:
+        # Fallback: decode JWT from Authorization header
+        import base64
+        import json
+        
+        auth_header = event.get('headers', {}).get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]  # Remove 'Bearer ' prefix
+            # Decode JWT payload (second part)
+            payload = token.split('.')[1]
+            # Add padding if needed
+            payload += '=' * (4 - len(payload) % 4)
+            decoded = base64.b64decode(payload)
+            claims = json.loads(decoded)
+            return claims['sub']
+        
+        raise ValueError("No user ID found in event")
 
 def get_cognito_email(event) -> str:
     """Extract email from Cognito claims"""
-    email = event['requestContext']['authorizer']['claims'].get('email', '')
-    print(f"Extracted email from claims: {email}")
-    return email
+    # Try authorizer claims first
+    try:
+        email = event['requestContext']['authorizer']['claims'].get('email', '')
+        print(f"Extracted email from authorizer claims: {email}")
+        return email
+    except KeyError:
+        # Fallback: decode JWT from Authorization header
+        import base64
+        import json
+        
+        auth_header = event.get('headers', {}).get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]
+            payload = token.split('.')[1]
+            payload += '=' * (4 - len(payload) % 4)
+            decoded = base64.b64decode(payload)
+            claims = json.loads(decoded)
+            email = claims.get('email', '')
+            print(f"Extracted email from JWT: {email}")
+            return email
+        
+        return ''

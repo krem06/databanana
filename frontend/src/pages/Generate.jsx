@@ -8,12 +8,12 @@ function Generate() {
   // Form state
   const [context, setContext] = useState('')
   const [excludeTags, setExcludeTags] = useState('')
-  const [imageCount, setImageCount] = useState()
+  const [imageCount, setImageCount] = useState(10)
   const [activeDatasetName, setActiveDatasetName] = useState('')
   
   // Generation state
   const [generating, setGenerating] = useState(false)
-  const [userCredits, setUserCredits] = useState()
+  const [userCredits, setUserCredits] = useState(0)
   const [batches, setBatches] = useState([])
   
   // Modal state
