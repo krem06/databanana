@@ -92,14 +92,16 @@ Example format: "prompt 1; prompt 2; prompt 3"
 """
     
     try:
-        response = anthropic_client.messages.create(
-            model="claude-3-5-haiku-20241022",
-            max_tokens=2000,  # Increased for 100 variations
-            messages=[{"role": "user", "content": prompt}]
-        )
-        print(f"Claude Haiku response: {response}")
+        #response = anthropic_client.messages.create(
+        #    model="claude-3-5-haiku-20241022",
+        #    max_tokens=2000,  # Increased for 100 variations
+        #    messages=[{"role": "user", "content": prompt}]
+        #)
+        #print(f"Claude Haiku response: {response}")
         # Parse semicolon-separated response
-        variations_text = response.content[0].text.strip()
+        #variations_text = response.content[0].text.strip()
+
+        variations_text = "A sleek Siamese cat perched on a sun-drenched windowsill, watching raindrops cascade down glass, soft morning light creating gentle shadows; A curious tabby cat exploring a messy bookshelf, precariously balanced between old novels and ceramic figurines; A ginger cat stretching lazily on a weathered wooden dock overlooking a misty lake at dawn; A black and white cat sitting regally inside an antique leather armchair in a dimly lit study; A silver Persian cat curled up in a basket of fresh laundry, surrounded by soft white towels and gentle sunlight; A street cat prowling through a narrow cobblestone alley in an old European city at twilight; A Maine Coon cat sitting attentively near a kitchen window, watching birds flutter around a backyard bird feeder; A calico cat nestled among wildflowers in a lush meadow, golden afternoon sunlight filtering through grass; A fluffy white cat balanced on the edge of a vintage bicycle leaning against a rustic barn wall; A sleepy cat napping on a warm radiator, casting a soft shadow against peeling wallpaper"
         variations = [v.strip() for v in variations_text.split(';') if v.strip()]
         
         # Ensure we have the right count, pad with fallbacks if needed
