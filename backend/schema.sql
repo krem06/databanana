@@ -29,7 +29,14 @@ CREATE TABLE batches (
     image_count INTEGER NOT NULL,
     cost DECIMAL(10,2) NOT NULL,
     status VARCHAR(20) DEFAULT 'processing',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    gemini_batch_id VARCHAR(255),
+    error_message TEXT,
+    current_step VARCHAR(50),
+    progress INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_batch_status CHECK (status IN ('processing', 'completed', 'failed', 'cancelled'))
 );
 
 -- Images belong to a specific batch (no delete, only validate/reject)
@@ -40,10 +47,21 @@ CREATE TABLE images (
     prompt TEXT,
     url VARCHAR(500),
     tags JSONB,
+    rekognition_labels JSONB,
+    bounding_boxes JSONB,
     validated BOOLEAN DEFAULT false,
     rejected BOOLEAN DEFAULT false,
     public BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- WebSocket connections table (if using PostgreSQL instead of DynamoDB)
+CREATE TABLE IF NOT EXISTS websocket_connections (
+    connection_id VARCHAR(255) PRIMARY KEY,
+    execution_id VARCHAR(255),
+    connected_at TIMESTAMP DEFAULT NOW(),
+    subscribed_at TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '1 hour')
 );
 
 -- Optimized indexes
@@ -57,3 +75,10 @@ CREATE INDEX idx_images_batch_created ON images (batch_id, created_at);
 CREATE INDEX idx_images_dataset_created ON images (dataset_id, created_at);
 CREATE INDEX idx_images_validated ON images (dataset_id, validated) WHERE validated = true;
 CREATE INDEX idx_images_rejected ON images (dataset_id, rejected) WHERE rejected = true;
+
+-- Additional indexes from migrations
+CREATE INDEX idx_batches_status ON batches(status);
+CREATE INDEX idx_batches_user_id_status ON batches(user_id, status);
+CREATE INDEX idx_batches_gemini_batch_id ON batches(gemini_batch_id);
+CREATE INDEX idx_websocket_execution_id ON websocket_connections(execution_id);
+CREATE INDEX idx_websocket_expires_at ON websocket_connections(expires_at);

@@ -120,10 +120,48 @@
         "StringEquals": {
           "iam:PassedToService": [
             "lambda.amazonaws.com",
-            "apigateway.amazonaws.com"
+            "apigateway.amazonaws.com",
+            "states.amazonaws.com"
           ]
         }
       }
+    },
+    {
+      "Sid": "StepFunctions",
+      "Effect": "Allow",
+      "Action": [
+        "states:CreateStateMachine",
+        "states:UpdateStateMachine",
+        "states:DeleteStateMachine",
+        "states:DescribeStateMachine",
+        "states:TagResource",
+        "states:UntagResource"
+      ],
+      "Resource": "arn:aws:states:*:405681550119:stateMachine:databanana-*"
+    },
+    {
+      "Sid": "DynamoDB",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:UpdateTable",
+        "dynamodb:DeleteTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:TagResource",
+        "dynamodb:UntagResource"
+      ],
+      "Resource": "arn:aws:dynamodb:*:405681550119:table/databanana-*"
+    },
+    {
+      "Sid": "APIGatewayV2",
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:*"
+      ],
+      "Resource": [
+        "arn:aws:apigateway:*::/apis",
+        "arn:aws:apigateway:*::/apis/*"
+      ]
     },
     {
       "Sid": "LogGroups",

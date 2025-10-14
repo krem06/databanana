@@ -85,7 +85,6 @@ def create_images(cognito_user_id, event):
         conn.rollback()
         raise e
 
-# not needed? clem
 def update_image(cognito_user_id, event):
     image_id = event['pathParameters']['id']
     body = json.loads(event['body'])

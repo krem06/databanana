@@ -20,6 +20,9 @@ Globals:
         GEMINI_API_KEY: !Ref GeminiApiKey
         FRONTEND_URL: !Ref FrontendUrl
         TEST_MODE: !Ref TestModeParam
+        STATE_MACHINE_ARN: !Ref ImageGenerationStateMachine
+        CONNECTIONS_TABLE: !Ref WebSocketConnectionsTable
+        WEBSOCKET_API_ID: !Ref WebSocketApi
   Api:
     Cors:
       AllowMethods: "'GET,POST,PUT,OPTIONS'"
@@ -29,6 +32,14 @@ Globals:
       Authorizers:
         CognitoAuthorizer:
           UserPoolArn: !GetAtt UserPool.Arn
+
+  # WebSocket API for real-time updates
+  WebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${AWS::StackName}-websocket"
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: "$request.body.action"
 
 Parameters:
   DatabaseHost:
@@ -175,12 +186,122 @@ Resources:
       Handler: generate.handler
       Timeout: 60
       MemorySize: 512
+      Policies:
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt ImageGenerationStateMachine.Name
       Events:
         Generate:
           Type: Api
           Properties:
             Path: /generate
             Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+
+  # Step Functions Lambda functions
+  ValidateAndSetupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: validate_and_setup.handler
+      Timeout: 30
+      MemorySize: 256
+
+  GeneratePromptsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: generate_prompts.handler
+      Timeout: 300
+      MemorySize: 512
+
+  StartImageGenerationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: start_image_generation.handler
+      Timeout: 300
+      MemorySize: 512
+
+  CheckImageStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: check_image_status.handler
+      Timeout: 30
+      MemorySize: 256
+
+  ProcessImagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: process_images.handler
+      Timeout: 900
+      MemorySize: 1024
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ImageBucket
+
+  LabelImagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: label_images.handler
+      Timeout: 900
+      MemorySize: 512
+      Policies:
+        - RekognitionDetectOnlyPolicy: {}
+        - S3ReadPolicy:
+            BucketName: !Ref ImageBucket
+
+  SaveFinalResultsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: save_final_results.handler
+      Timeout: 300
+      MemorySize: 256
+
+  RefundUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: refund_user.handler
+      Timeout: 60
+      MemorySize: 256
+
+  # Debug and monitoring endpoint
+  DebugStepFunctionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: debug_step_functions.handler
+      Timeout: 30
+      MemorySize: 256
+      Policies:
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt ImageGenerationStateMachine.Name
+        - Statement:
+          - Effect: Allow
+            Action:
+              - states:ListExecutions
+              - states:DescribeExecution
+              - states:GetExecutionHistory
+            Resource: !Sub "${ImageGenerationStateMachine}*"
+      Events:
+        ListExecutions:
+          Type: Api
+          Properties:
+            Path: /debug/executions
+            Method: get
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetExecution:
+          Type: Api
+          Properties:
+            Path: /debug/executions/{execution_id}
+            Method: get
             Auth:
               Authorizer: CognitoAuthorizer
 
@@ -238,13 +359,303 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambdas/
-      Handler: webhook.handler
+      Handler: stripe_webhook.handler
       Events:
         Webhook:
           Type: Api
           Properties:
             Path: /webhook
             Method: post
+
+  # Workbench Functions for Testing APIs
+  WorkbenchClaudeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: workbench_claude.lambda_handler
+      Timeout: 60
+      MemorySize: 512
+      Events:
+        WorkbenchClaude:
+          Type: Api
+          Properties:
+            Path: /workbench/claude
+            Method: post
+        WorkbenchClaudeOptions:
+          Type: Api
+          Properties:
+            Path: /workbench/claude
+            Method: options
+
+  WorkbenchGeminiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: workbench_gemini.lambda_handler
+      Timeout: 600  # 10 minutes for batch processing + image download
+      MemorySize: 1024
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ImageBucket
+      Events:
+        WorkbenchGemini:
+          Type: Api
+          Properties:
+            Path: /workbench/gemini
+            Method: post
+        WorkbenchGeminiOptions:
+          Type: Api
+          Properties:
+            Path: /workbench/gemini
+            Method: options
+
+  WorkbenchStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: workbench_status.lambda_handler
+      Timeout: 60
+      MemorySize: 1024
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ImageBucket
+      Events:
+        WorkbenchStatus:
+          Type: Api
+          Properties:
+            Path: /workbench/status/{job_id}
+            Method: get
+
+  # Step Functions State Machine
+  ImageGenerationStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: ImageGenerationStateMachine
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      Definition:
+        Comment: "Image Generation and Processing Workflow"
+        StartAt: "ValidateAndSetup"
+        States:
+          ValidateAndSetup:
+            Type: "Task"
+            Resource: !GetAtt ValidateAndSetupFunction.Arn
+            Next: "GeneratePrompts"
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: "HandleError"
+          GeneratePrompts:
+            Type: "Task"
+            Resource: !GetAtt GeneratePromptsFunction.Arn
+            Next: "StartImageGeneration"
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: "RefundUser"
+          StartImageGeneration:
+            Type: "Task"
+            Resource: !GetAtt StartImageGenerationFunction.Arn
+            Next: "WaitForImages"
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: "RefundUser"
+          WaitForImages:
+            Type: "Wait"
+            Seconds: 30
+            Next: "CheckImageStatus"
+          CheckImageStatus:
+            Type: "Task"
+            Resource: !GetAtt CheckImageStatusFunction.Arn
+            Next: "IsImageComplete"
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: "RefundUser"
+          IsImageComplete:
+            Type: "Choice"
+            Choices:
+              - Variable: "$.status"
+                StringEquals: "completed"
+                Next: "ProcessImages"
+              - Variable: "$.status"
+                StringEquals: "failed"
+                Next: "RefundUser"
+              - Variable: "$.retryCount"
+                NumericGreaterThan: 20
+                Next: "RefundUser"
+            Default: "IncrementRetry"
+          IncrementRetry:
+            Type: "Pass"
+            Result: 1
+            ResultPath: "$.retryIncrement"
+            Next: "UpdateRetryCount"
+          UpdateRetryCount:
+            Type: "Pass"
+            Parameters:
+              "retryCount.$": "$.retryCount + $.retryIncrement"
+              "context.$": "$.context"
+              "exclude_tags.$": "$.exclude_tags"
+              "image_count.$": "$.image_count"
+              "cognito_user_id.$": "$.cognito_user_id"
+              "cost.$": "$.cost"
+              "user_credits.$": "$.user_credits"
+              "batch_id.$": "$.batch_id"
+              "variations.$": "$.variations"
+              "gemini_batch_id.$": "$.gemini_batch_id"
+              "mock_mode.$": "$.mock_mode"
+            Next: "WaitForImages"
+          ProcessImages:
+            Type: "Task"
+            Resource: !GetAtt ProcessImagesFunction.Arn
+            Next: "LabelImages"
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: "RefundUser"
+          LabelImages:
+            Type: "Task"
+            Resource: !GetAtt LabelImagesFunction.Arn
+            Next: "SaveFinalResults"
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: "RefundUser"
+          SaveFinalResults:
+            Type: "Task"
+            Resource: !GetAtt SaveFinalResultsFunction.Arn
+            Next: "Success"
+          Success:
+            Type: "Succeed"
+          RefundUser:
+            Type: "Task"
+            Resource: !GetAtt RefundUserFunction.Arn
+            Next: "HandleError"
+          HandleError:
+            Type: "Fail"
+
+  # IAM Role for Step Functions
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt ValidateAndSetupFunction.Arn
+                  - !GetAtt GeneratePromptsFunction.Arn
+                  - !GetAtt StartImageGenerationFunction.Arn
+                  - !GetAtt CheckImageStatusFunction.Arn
+                  - !GetAtt ProcessImagesFunction.Arn
+                  - !GetAtt LabelImagesFunction.Arn
+                  - !GetAtt SaveFinalResultsFunction.Arn
+                  - !GetAtt RefundUserFunction.Arn
+
+  # WebSocket Infrastructure
+  WebSocketConnectionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-websocket-connections"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: connectionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connectionId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  WebSocketFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: websocket_simple.handler
+      Timeout: 30
+      MemorySize: 256
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
+
+  # WebSocket Routes
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: $connect
+      Target: !Sub "integrations/${ConnectIntegration}"
+
+  ConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketFunction.Arn}/invocations"
+
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: $disconnect
+      Target: !Sub "integrations/${DisconnectIntegration}"
+
+  DisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketFunction.Arn}/invocations"
+
+  SubscribeRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocketApi
+      RouteKey: subscribe
+      Target: !Sub "integrations/${SubscribeIntegration}"
+
+  SubscribeIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketFunction.Arn}/invocations"
+
+  WebSocketDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - ConnectRoute
+      - DisconnectRoute
+      - SubscribeRoute
+    Properties:
+      ApiId: !Ref WebSocketApi
+
+  WebSocketStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref WebSocketApi
+      DeploymentId: !Ref WebSocketDeployment
+      StageName: prod
+
+  # Lambda permissions for WebSocket
+  WebSocketConnectPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref WebSocketFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
 Outputs:
   ApiGatewayApi:
@@ -258,3 +669,7 @@ Outputs:
   UserPoolClientId:
     Description: "Cognito User Pool Client ID"  
     Value: !Ref UserPoolClient
+  
+  WebSocketApiUrl:
+    Description: "WebSocket API URL for real-time updates"
+    Value: !Sub "wss://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod"

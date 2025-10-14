@@ -18,10 +18,8 @@ def handler(event, context):
         if method == 'GET':
             print("Handling GET request for user data")
             return get_user(cognito_user_id, event)
-        # dangerous! clem
         elif method == 'POST':
-            print("Handling POST request for credit update")
-            return update_credits(cognito_user_id, event)
+            raise Exception("Credit updates not allowed via API")
             
     except Exception as e:
         print(f"Error in user handler: {e}")
