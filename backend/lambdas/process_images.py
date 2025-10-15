@@ -2,7 +2,7 @@ import json
 import os
 import boto3
 from google import genai
-from mock_service import mock_gemini_images
+from progress_utils import update_batch_progress
 
 # Configure clients
 gemini_client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
@@ -18,25 +18,12 @@ def handler(event, context):
         gemini_batch_id = event['gemini_batch_id']
         variations = event['variations']
         cognito_user_id = event['cognito_user_id']
-        mock_mode = event.get('mock_mode', False)
+        batch_id = event['batch_id']
         bucket = os.environ.get('S3_BUCKET')
         
-        if mock_mode:
-            # Generate mock images for testing
-            images = []
-            for i, variation in enumerate(variations):
-                images.append({
-                    'id': i,
-                    'prompt': variation,
-                    'url': f'https://mock-bucket.s3.amazonaws.com/test/{cognito_user_id}/{i}_{hash(variation)}.png',
-                    'tags': ['generated', 'gemini', 'mock'],
-                    's3_key': f'test/{cognito_user_id}/{i}_{hash(variation)}.png'
-                })
-            
-            return {
-                **event,
-                'images': images
-            }
+        # Update progress
+        execution_id = event.get('execution_id')
+        update_batch_progress(batch_id, 'ProcessImages', 70, execution_id)
         
         # Get batch results from Gemini
         batch_responses = gemini_client.batches.list_outputs(name=gemini_batch_id)

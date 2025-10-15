@@ -3,7 +3,7 @@ Shared utilities for progress tracking and WebSocket updates
 """
 from db_utils import get_db
 
-def update_batch_progress(batch_id, current_step, progress):
+def update_batch_progress(batch_id, current_step, progress, execution_id=None):
     """Update batch progress in database and send WebSocket update"""
     try:
         conn = get_db()
@@ -16,21 +16,23 @@ def update_batch_progress(batch_id, current_step, progress):
         conn.commit()
         print(f'Updated batch {batch_id}: {current_step} ({progress}%)')
         
-        # Send WebSocket update
-        from websocket_simple import send_progress_update
-        
-        send_progress_update(str(batch_id), {
-            'batch_id': batch_id,
-            'current_step': current_step,
-            'progress': progress,
-            'status': 'processing',
-            'message': get_step_message(current_step)
-        })
+        # Send WebSocket update using execution_id for frontend tracking
+        if execution_id:
+            from websocket_simple import send_progress_update
+            
+            send_progress_update(execution_id, {
+                'batch_id': batch_id,
+                'execution_id': execution_id,
+                'current_step': current_step,
+                'progress': progress,
+                'status': 'processing',
+                'message': get_step_message(current_step)
+            })
             
     except Exception as e:
         print(f'Failed to update progress: {str(e)}')
 
-def update_batch_completion(batch_id, status, final_data=None):
+def update_batch_completion(batch_id, status, final_data=None, execution_id=None):
     """Mark batch as completed or failed and send final WebSocket update"""
     try:
         conn = get_db()
@@ -55,21 +57,23 @@ def update_batch_completion(batch_id, status, final_data=None):
         conn.commit()
         print(f'Batch {batch_id} marked as {status}')
         
-        # Send final WebSocket update
-        from websocket_simple import send_progress_update
-        
-        update_data = {
-            'batch_id': batch_id,
-            'current_step': 'Completed' if status == 'completed' else 'Failed',
-            'progress': 100 if status == 'completed' else 0,
-            'status': status,
-            'message': 'Processing completed successfully!' if status == 'completed' else 'Processing failed'
-        }
-        
-        if final_data:
-            update_data.update(final_data)
+        # Send final WebSocket update using execution_id
+        if execution_id:
+            from websocket_simple import send_progress_update
             
-        send_progress_update(str(batch_id), update_data)
+            update_data = {
+                'batch_id': batch_id,
+                'execution_id': execution_id,
+                'current_step': 'Completed' if status == 'completed' else 'Failed',
+                'progress': 100 if status == 'completed' else 0,
+                'status': status,
+                'message': 'Processing completed successfully!' if status == 'completed' else 'Processing failed'
+            }
+            
+            if final_data:
+                update_data.update(final_data)
+                
+            send_progress_update(execution_id, update_data)
             
     except Exception as e:
         print(f'Failed to update completion status: {str(e)}')

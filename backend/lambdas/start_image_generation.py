@@ -2,7 +2,6 @@ import json
 import os
 from google import genai
 from db_utils import get_db
-from mock_service import mock_gemini_images
 from progress_utils import update_batch_progress
 
 # Configure Gemini
@@ -20,18 +19,8 @@ def handler(event, context):
         cognito_user_id = event['cognito_user_id']
         
         # Update progress in database
-        update_batch_progress(batch_id, 'StartImageGeneration', 30)
-        
-        # Check for test mode
-        mock_response = mock_gemini_images(variations)
-        if mock_response:
-            # For test mode, simulate immediate completion
-            return {
-                **event,
-                'gemini_batch_id': 'mock_batch_123',
-                'status': 'completed',
-                'mock_mode': True
-            }
+        execution_id = event.get('execution_id')
+        update_batch_progress(batch_id, 'StartImageGeneration', 30, execution_id)
         
         # Create batch job with Gemini
         inline_requests = []
@@ -66,8 +55,7 @@ def handler(event, context):
         return {
             **event,
             'gemini_batch_id': batch_job.name,
-            'status': 'processing',
-            'mock_mode': False
+            'status': 'processing'
         }
         
     except Exception as e:

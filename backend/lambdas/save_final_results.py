@@ -41,11 +41,12 @@ def handler(event, context):
         print(f"Saved {len(images)} images for batch {batch_id}")
         
         # Send completion notification via WebSocket
+        execution_id = event.get('execution_id')
         update_batch_completion(batch_id, 'completed', {
             'image_count': len(images),
             'images': images[:5],  # Send first 5 images for preview
             'message': f'Successfully generated {len(images)} images!'
-        })
+        }, execution_id)
         
         return {
             'batch_id': batch_id,

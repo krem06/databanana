@@ -1,7 +1,7 @@
 import json
 import os
 import boto3
-from mock_service import mock_rekognition_labels
+from progress_utils import update_batch_progress
 
 # Initialize Rekognition client
 rekognition = boto3.client('rekognition')
@@ -14,27 +14,21 @@ def handler(event, context):
         print(f'Event: {event}')
         
         images = event['images']
-        mock_mode = event.get('mock_mode', False)
+        batch_id = event['batch_id']
         bucket = os.environ.get('S3_BUCKET')
+        
+        # Update progress
+        execution_id = event.get('execution_id')
+        update_batch_progress(batch_id, 'LabelImages', 80, execution_id)
         
         labeled_images = []
         
         for image in images:
             try:
-                if mock_mode:
-                    # Use mock labels for testing
-                    mock_labels = mock_rekognition_labels(image['prompt'])
-                    if mock_labels:
-                        labels = mock_labels.get('labels', [])
-                        bounding_boxes = mock_labels.get('bounding_boxes', [])
-                    else:
-                        labels = ['object', 'scene', 'outdoor']
-                        bounding_boxes = []
-                else:
-                    # Real Rekognition API calls
-                    labels, bounding_boxes = analyze_image_with_rekognition(
-                        bucket, image['s3_key']
-                    )
+                # Analyze image with Rekognition
+                labels, bounding_boxes = analyze_image_with_rekognition(
+                    bucket, image['s3_key']
+                )
                 
                 # Add labels and bounding boxes to image data
                 labeled_image = {

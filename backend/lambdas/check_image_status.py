@@ -14,13 +14,13 @@ def handler(event, context):
         print(f'Event: {event}')
         
         gemini_batch_id = event['gemini_batch_id']
-        mock_mode = event.get('mock_mode', False)
         retry_count = event.get('retryCount', 0)
         batch_id = event['batch_id']
         
         # Update progress - show waiting progress based on retry count
         progress = min(50 + (retry_count * 2), 65)  # Progress from 50% to 65% while waiting
-        update_batch_progress(batch_id, 'CheckImageStatus', progress)
+        execution_id = event.get('execution_id')
+        update_batch_progress(batch_id, 'CheckImageStatus', progress, execution_id)
         
         # Check real batch status
         batch_status = gemini_client.batches.get(name=gemini_batch_id)

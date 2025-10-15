@@ -19,10 +19,10 @@ Globals:
         ANTHROPIC_API_KEY: !Ref AnthropicApiKey
         GEMINI_API_KEY: !Ref GeminiApiKey
         FRONTEND_URL: !Ref FrontendUrl
-        TEST_MODE: !Ref TestModeParam
         STATE_MACHINE_ARN: !Ref ImageGenerationStateMachine
         CONNECTIONS_TABLE: !Ref WebSocketConnectionsTable
         WEBSOCKET_API_ID: !Ref WebSocketApi
+        WEBSOCKET_STAGE: prod
   Api:
     Cors:
       AllowMethods: "'GET,POST,PUT,OPTIONS'"
@@ -63,13 +63,6 @@ Parameters:
     Type: String
     NoEcho: true
     Description: Stripe secret key (test)
-  TestModeParam:
-    Type: String
-    Description: Enable test mode for API mocking
-    Default: false
-    AllowedValues:
-      - true
-      - false
   AnthropicApiKey:
     Type: String
     NoEcho: true
@@ -207,6 +200,14 @@ Resources:
       Handler: validate_and_setup.handler
       Timeout: 30
       MemorySize: 256
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   GeneratePromptsFunction:
     Type: AWS::Serverless::Function
@@ -215,6 +216,14 @@ Resources:
       Handler: generate_prompts.handler
       Timeout: 300
       MemorySize: 512
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   StartImageGenerationFunction:
     Type: AWS::Serverless::Function
@@ -223,6 +232,14 @@ Resources:
       Handler: start_image_generation.handler
       Timeout: 300
       MemorySize: 512
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   CheckImageStatusFunction:
     Type: AWS::Serverless::Function
@@ -231,6 +248,14 @@ Resources:
       Handler: check_image_status.handler
       Timeout: 30
       MemorySize: 256
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   ProcessImagesFunction:
     Type: AWS::Serverless::Function
@@ -242,6 +267,13 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref ImageBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   LabelImagesFunction:
     Type: AWS::Serverless::Function
@@ -254,6 +286,13 @@ Resources:
         - RekognitionDetectOnlyPolicy: {}
         - S3ReadPolicy:
             BucketName: !Ref ImageBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   SaveFinalResultsFunction:
     Type: AWS::Serverless::Function
@@ -262,6 +301,14 @@ Resources:
       Handler: save_final_results.handler
       Timeout: 300
       MemorySize: 256
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   RefundUserFunction:
     Type: AWS::Serverless::Function
@@ -270,6 +317,14 @@ Resources:
       Handler: refund_user.handler
       Timeout: 60
       MemorySize: 256
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:ManageConnections
+            Resource: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*"
 
   # Debug and monitoring endpoint
   DebugStepFunctionsFunction:
@@ -499,7 +554,7 @@ Resources:
               "batch_id.$": "$.batch_id"
               "variations.$": "$.variations"
               "gemini_batch_id.$": "$.gemini_batch_id"
-              "mock_mode.$": "$.mock_mode"
+              "execution_id.$": "$.execution_id"
             Next: "WaitForImages"
           ProcessImages:
             Type: "Task"

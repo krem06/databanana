@@ -144,22 +144,3 @@ def format_execution_history(events):
     
     return formatted_events
 
-# CLI tool for local debugging
-if __name__ == "__main__":
-    import sys
-    import boto3
-    
-    if len(sys.argv) < 2:
-        print("Usage: python debug_step_functions.py <execution_name>")
-        sys.exit(1)
-    
-    execution_name = sys.argv[1]
-    
-    # Mock event for local testing
-    mock_event = {
-        'pathParameters': {'execution_id': execution_name},
-        'httpMethod': 'GET'
-    }
-    
-    result = handler(mock_event, None)
-    print(json.dumps(json.loads(result['body']), indent=2))

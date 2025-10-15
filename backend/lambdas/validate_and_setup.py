@@ -1,6 +1,7 @@
 import json
 import os
 from db_utils import get_db, get_cognito_user_id, get_user_db_id
+from progress_utils import update_batch_progress
 
 def handler(event, context):
     """
@@ -49,6 +50,10 @@ def handler(event, context):
         
         conn.commit()
         print(f'Credits deducted: {cost}, Batch created: {batch_id}')
+        
+        # Send progress update
+        execution_id = event.get('execution_id')
+        update_batch_progress(batch_id, 'ValidateAndSetup', 10, execution_id)
         
         # Return data for next step
         return {

@@ -88,8 +88,7 @@ def lambda_handler(event, context):
                 process_event = {
                     'gemini_batch_id': job_id,
                     'variations': prompts,
-                    'cognito_user_id': 'workbench',
-                    'mock_mode': False
+                    'cognito_user_id': 'workbench'
                 }
                 
                 result = process_images_handler(process_event, context)

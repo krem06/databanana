@@ -27,11 +27,12 @@ def handler(event, context):
         
         # Send failure notification via WebSocket if batch exists
         if batch_id:
+            execution_id = event.get('execution_id')
             update_batch_completion(batch_id, 'failed', {
                 'error_message': event.get('error', 'Processing failed'),
                 'refunded': cost,
                 'message': f'Processing failed. ${cost:.2f} has been refunded to your account.'
-            })
+            }, execution_id)
         
         return {
             'batch_id': batch_id,

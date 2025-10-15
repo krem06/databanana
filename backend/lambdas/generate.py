@@ -53,14 +53,18 @@ def handler(event, context):
             'cognito_user_id': cognito_user_id
         }
         
+        execution_name = f"image-generation-{cognito_user_id}-{int(time.time())}"
+        
+        # Add execution_id to workflow input
+        workflow_input['execution_id'] = execution_name
+        
         execution = stepfunctions.start_execution(
             stateMachineArn=state_machine_arn,
-            name=f"image-generation-{cognito_user_id}-{int(time.time())}",
+            name=execution_name,
             input=json.dumps(workflow_input)
         )
         
         execution_arn = execution['executionArn']
-        execution_name = execution_arn.split(':')[-1]
         
         print(f'Started Step Functions execution: {execution_name}')
         
