@@ -1,47 +1,51 @@
-# 🚀 Data Banana Deployment Guide
+# 🚀 Deployment Guide
 
 ## Prerequisites
-- AWS CLI configured with credentials
-- SAM CLI installed (`pip install aws-sam-cli`)
-- PostgreSQL database (external service like Neon, Supabase, or PlanetScale)
 
-## Step 1: Deploy Backend Infrastructure
+- AWS CLI configured
+- SAM CLI installed (`pip install aws-sam-cli`)
+- External PostgreSQL database (Neon)
+
+## Step 1: Deploy Backend
 
 ```bash
 cd backend
 ./deploy.sh
 ```
 
-**SAM will prompt for:**
+**Use samconfig.toml for config**
 - Stack name: `databanana-prod`
-- AWS region: `us-east-1`
-- Database host: `your-external-db-host.com`
+- AWS region: `eu-west-1`
 - Database credentials
 - API keys: Stripe, Claude, Gemini
 
-**SAM outputs (save these):**
-- `ApiGatewayApi`: https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod/
-- `UserPoolId`: us-east-1_XXXXXXXXX
-- `UserPoolClientId`: xxxxxxxxxxxxxxxxxxxxxxxxxx
+**Save these SAM outputs:**
+- `ApiGatewayApi`: Your API endpoint
+- `UserPoolId`: Cognito User Pool ID
+- `UserPoolClientId`: Cognito Client ID
 
+## Step 2: Initialize Database
 
+```bash
+psql -h your-db-host.com -U username -d databanana -f backend/schema.sql
+```
 
-## Step 2: Configure Frontend
+## Step 3: Configure Frontend
 
 Update `frontend/src/config.js`:
 ```javascript
 export const awsConfig = {
   Auth: {
     Cognito: {
-      region: 'us-east-1',
-      userPoolId: 'us-east-1_XXXXXXXXX', // From SAM output
-      userPoolClientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxx', // From SAM output
+      region: 'eu-west-1',
+      userPoolId: 'eu-west-1_XXXXXXXXX', // From SAM output
+      userPoolClientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxx' // From SAM output
     }
   },
   API: {
     REST: {
       databanana: {
-        endpoint: 'https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod', // From SAM output
+        endpoint: 'https://xxxxxxxxxx.execute-api.eu-west-1.amazonaws.com/Prod', // From SAM output
         region: 'us-east-1'
       }
     }
@@ -49,57 +53,42 @@ export const awsConfig = {
 }
 ```
 
-## Step 3: Initialize Database
+## Step 4: Deploy Frontend
 
-Connect to your PostgreSQL database and run:
-```bash
-psql -h your-external-db-host.com -U username -d databanana -f backend/schema.sql
-```
-
-## Step 4: Deploy Frontend to Amplify
-
-### Option A: AWS Console
+### AWS Amplify (Recommended)
 1. Go to [AWS Amplify Console](https://console.aws.amazon.com/amplify/)
-2. **Connect repository** → Select your GitHub/GitLab repo
-3. **Build settings** → Amplify detects `amplify.yml` automatically
-4. **Deploy** → First build takes ~3-5 minutes
+2. Connect your GitHub repository
+3. Use the included `amplify.yml` build settings
+4. Deploy
 
-### Option B: Amplify CLI
+### Local Development
 ```bash
-npm install -g @aws-amplify/cli
-amplify init
-amplify add hosting
-amplify publish
+cd frontend
+npm install
+npm run dev
 ```
 
-## Step 5: Post-Deployment
+## Verification
 
-1. **Test authentication** → Sign up/login should work
-2. **Test API calls** → Generate images, view gallery
-3. **Test payments** → Add credits via Stripe
-4. **Monitor costs** → Check AWS billing dashboard
+1. **Test authentication**: Sign up/login
+2. **Test generation**: Create a batch of images
+3. **Test workbench**: Visit `/workbench/` for API testing
 
-## Environment Variables (for reference)
+## Environment Variables
 
-Backend Lambda functions use:
+Backend functions use:
 - `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
 - `ANTHROPIC_API_KEY` (Claude)
-- `GEMINI_API_KEY` (Image generation via Nano Banana)
+- `GEMINI_API_KEY` (Image generation)
 - `STRIPE_SECRET` (Payments)
-- `S3_BUCKET` (Auto-created by SAM)
+- `S3_BUCKET` (Auto-created)
 
 ## Troubleshooting
 
 **CORS errors**: Ensure frontend config matches SAM outputs
-**Database errors**: Check database firewall allows Lambda access from AWS IPs
-**API key errors**: Verify all keys are correctly set in SAM parameters
-**Build errors**: Check Amplify build logs in console
+**Database errors**: Check database firewall allows Lambda IPs
+**API key errors**: Verify keys in SAM parameters
+**Build errors**: Check Amplify build logs
 
-## Costs Estimate
+## Cost Estimate
 
-- **Lambda**: ~$0.20/1000 requests
-- **API Gateway**: ~$3.50/million requests  
-- **Cognito**: Free tier covers most usage
-- **S3**: ~$0.023/GB storage
-- **External DB**: ~$0-25/month (Neon free tier or paid plans)
-- **Amplify Hosting**: ~$1/month for small apps
