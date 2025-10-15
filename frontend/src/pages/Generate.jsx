@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import { useOffline } from '../hooks/useOffline'
 import { apiClient } from '../api'
+import { useWebSocketProgress } from '../hooks/useWebSocketProgress'
 import ImageValidationGallery from '../components/ImageValidationGallery'
+import BatchProgressIndicator from '../components/BatchProgressIndicator'
+import ConnectionStatus from '../components/ConnectionStatus'
 
 function Generate() {
   // Form state
@@ -32,6 +35,9 @@ function Generate() {
   const { user } = useAuth()
   const { isOffline } = useOffline()
   const validationRef = useRef()
+  
+  // WebSocket progress tracking
+  const { progressData, connectionStatus, trackBatch, stopTracking } = useWebSocketProgress()
 
   useEffect(() => {
     loadFromLocalStorage()
@@ -129,27 +135,83 @@ function Generate() {
     setGenerating(true)
 
     try {
-      // Call the real API
+      // Call the real API (now returns execution_id for Step Functions)
       const response = await apiClient.generateBatch(context, excludeTags, imageCount)
       
+      // Create batch record with pending status
       const newBatch = {
-        id: response.batch_id || `batch_${Date.now()}`,
-        images: response.images || [],
+        id: response.execution_id || `execution_${Date.now()}`,
+        executionId: response.execution_id,
+        images: [], // Will be populated when generation completes
         context,
         excludeTags,
-        cost: response.cost || parseFloat(calculateCost()),
-        timestamp: new Date(response.timestamp || Date.now()),
-        datasetName: activeDatasetName
+        cost: response.estimated_cost || parseFloat(calculateCost()),
+        timestamp: new Date(),
+        datasetName: activeDatasetName,
+        status: 'processing' // Track status
       }
       
       setBatches(prev => [newBatch, ...prev])
-      setUserCredits(prev => prev - (response.cost || parseFloat(calculateCost())))
+      setUserCredits(prev => prev - (response.estimated_cost || parseFloat(calculateCost())))
+      
+      // Start tracking progress via WebSocket
+      if (response.execution_id) {
+        trackBatch(response.execution_id)
+      }
     } catch (error) {
       console.error('Error generating batch:', error)
       alert(`Error generating images: ${error.message}. Please try again.`)
     } finally {
       setGenerating(false)
     }
+  }
+
+  // Handle batch completion from WebSocket
+  const handleBatchComplete = (executionId, progressData) => {
+    console.log('Batch completed:', executionId, progressData)
+    
+    // Update the batch with completed images
+    setBatches(prev => prev.map(batch => {
+      if (batch.executionId === executionId) {
+        return {
+          ...batch,
+          images: progressData.images || [],
+          status: 'completed',
+          completedAt: new Date()
+        }
+      }
+      return batch
+    }))
+    
+    // Stop tracking this execution
+    stopTracking(executionId)
+    setGenerating(false)
+  }
+
+  // Handle batch error from WebSocket
+  const handleBatchError = (executionId, errorData) => {
+    console.error('Batch failed:', executionId, errorData)
+    
+    // Update batch status to failed
+    setBatches(prev => prev.map(batch => {
+      if (batch.executionId === executionId) {
+        return {
+          ...batch,
+          status: 'failed',
+          error: errorData.message || 'Generation failed',
+          completedAt: new Date()
+        }
+      }
+      return batch
+    }))
+    
+    // Refund credits if provided
+    if (errorData.refunded) {
+      setUserCredits(prev => prev + errorData.refunded)
+    }
+    
+    stopTracking(batchId)
+    setGenerating(false)
   }
 
   const handleSaveDataset = (dataset) => {
@@ -307,6 +369,7 @@ function Generate() {
                   ✓ Auto-saved
                 </span>
               )}
+              <ConnectionStatus status={connectionStatus} />
             </div>
             <span className="text-sm text-gray-600">
               Credits: <span className="font-medium text-blue-600">${userCredits.toFixed(2)}</span>
@@ -378,6 +441,17 @@ function Generate() {
           </div>
         </div>
 
+        {/* Real-time Progress Indicators */}
+        {Array.from(progressData.entries()).map(([batchId, progress]) => (
+          <BatchProgressIndicator
+            key={batchId}
+            batchId={batchId}
+            progress={progress}
+            onComplete={(progressData) => handleBatchComplete(batchId, progressData)}
+            onError={(errorData) => handleBatchError(batchId, errorData)}
+          />
+        ))}
+
         {/* Image Gallery */}
         {batches.length > 0 && (
           <div className="card p-6">
@@ -444,21 +518,14 @@ function Generate() {
           </div>
         )}
 
-        {/* Loading State */}
-        {generating && (
+        {/* Loading State (only show if no progress data available) */}
+        {generating && progressData.size === 0 && (
           <div className="card p-8">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-lg font-medium text-gray-700">Generating your images...</p>
+              <p className="text-lg font-medium text-gray-700">Starting generation process...</p>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {[...Array(imageCount)].map((_, i) => (
-                <div key={i} className="bg-gray-100 rounded-lg overflow-hidden animate-pulse">
-                  <div className="h-48 bg-gray-200"></div>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm text-gray-500">Connecting to real-time progress updates...</p>
           </div>
         )}
       </div>

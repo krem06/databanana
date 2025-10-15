@@ -29,15 +29,6 @@ export const apiClient = {
     }
   },
 
-  updateCredits: async (amount) => {
-    const response = await post({
-      apiName, 
-      path: '/user/credits',
-      options: { body: { amount } }
-    })
-    return response.response
-  },
-
   // Batch endpoints  
   getBatches: async () => {
     const response = await get({ apiName, path: '/batches' })

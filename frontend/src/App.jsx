@@ -54,9 +54,6 @@ function Navigation() {
           <div className="flex items-center gap-3">
             <img src="/src/assets/databanana-top.jpg" alt="Data Banana" className="w-8 h-8 rounded" />
             <span className="text-xl font-semibold text-manual">databanana.ai</span>
-            {import.meta.env.VITE_TEST_MODE === 'true' && (
-              <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">TEST</span>
-            )}
           </div>
           <div className="flex items-center gap-6">
             <Link to="/" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Home</Link>
@@ -70,31 +67,23 @@ function Navigation() {
             
             <ThemeToggle />
             
-            {isAuthenticated ? (
-              <div className="flex items-center gap-3">
-                {isOffline && (
-                  <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
-                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                    Offline
-                  </div>
-                )}
+            <div className="flex items-center gap-3">
+              {isOffline && (
+                <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                  Offline
+                </div>
+              )}
+              {isAuthenticated ? (
                 <div className="text-sm text-gray-600 dark:text-gray-300">
                   Credits: <span className="font-medium text-green-600 dark:text-green-400">${credits}</span>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                {isOffline && (
-                  <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
-                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                    Offline
-                  </div>
-                )}
+              ) : (
                 <button className="btn-primary" onClick={() => setShowAuthModal(true)}>
                   Login
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </nav>
