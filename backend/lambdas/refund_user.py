@@ -42,7 +42,7 @@ def handler(event, context):
         }
         
     except Exception as e:
-        print(f'Refund error: {str(e)}')
+        print(f'❌ REFUND ERROR: {str(e)} | execution_id={execution_id} user={cognito_user_id}')
         # Don't raise here - we don't want refund failures to cause more errors
         return {
             'batch_id': event.get('batch_id'),

@@ -15,15 +15,20 @@ def handler(event, context):
         exclude_tags = body.get('exclude_tags', '')
         image_count = body.get('image_count', 10)
         cognito_user_id = get_cognito_user_id(event)
+        print(f'🚀 GENERATE START: context="{context_text[:50]}..." images={image_count} user={cognito_user_id}')
         
         # Basic validation
         if not isinstance(image_count, int) or image_count < 10 or image_count > 100:
+            print(f'❌ VALIDATION ERROR: Invalid image count {image_count}')
             return {'statusCode': 400, 'body': json.dumps({'error': 'Image count must be between 10 and 100'})}
         
         # Calculate cost and check user credits before starting workflow
         cost = image_count * 0.05
+        print(f'💰 COST CHECK: ${cost:.2f} required for {image_count} images')
+        
         email = get_cognito_email(event)
         user_db_id = get_user_db_id(cognito_user_id, email)
+        print(f'👤 USER LOOKUP: email={email} db_id={user_db_id}')
         
         conn = get_db()
         cur = conn.cursor()
@@ -31,11 +36,14 @@ def handler(event, context):
         user_result = cur.fetchone()
         
         if not user_result:
+            print(f'❌ USER ERROR: User not found in database db_id={user_db_id}')
             return {'statusCode': 404, 'body': json.dumps({'error': 'User not found'})}
             
         user_credits = user_result[0]
+        print(f'💳 CREDITS: user has ${user_credits:.2f}, needs ${cost:.2f}')
         
         if user_credits < cost:
+            print(f'❌ INSUFFICIENT CREDITS: need ${cost:.2f} but have ${user_credits:.2f}')
             return {'statusCode': 402, 'body': json.dumps({
                 'error': f'Insufficient credits. Need ${cost:.2f} but you have ${user_credits:.2f}',
                 'required': cost,
@@ -64,9 +72,7 @@ def handler(event, context):
             input=json.dumps(workflow_input)
         )
         
-        execution_arn = execution['executionArn']
-        
-        print(f'Started Step Functions execution: {execution_name}')
+        print(f'✅ STEP FUNCTIONS STARTED: execution_id={execution_name}')
         
         return {'statusCode': 202, 'body': json.dumps({
             'execution_id': execution_name,
@@ -76,6 +82,6 @@ def handler(event, context):
         })}
         
     except Exception as e:
-        print(f'Error starting workflow: {str(e)}')
+        print(f'❌ GENERATE ERROR: {str(e)} | user={cognito_user_id} images={image_count}')
         return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
 

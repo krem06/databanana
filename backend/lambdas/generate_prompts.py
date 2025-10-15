@@ -11,19 +11,22 @@ def handler(event, context):
     Step 2: Generate image prompts using Claude
     """
     try:
-        print(f'Event: {event}')
-        
         context_text = event['context']
         exclude_tags = event['exclude_tags']
         image_count = event['image_count']
         batch_id = event['batch_id']
+        execution_id = event.get('execution_id', 'unknown')
+        
+        print(f'🎯 PROMPTS START: execution_id={execution_id} batch_id={batch_id} count={image_count}')
         
         # Update progress in database
-        execution_id = event.get('execution_id')
         update_batch_progress(batch_id, 'GeneratePrompts', 20, execution_id)
         
         # Generate variations
+        print(f'🤖 CALLING CLAUDE: context="{context_text[:30]}..." exclude="{exclude_tags}" count={image_count}')
         variations = generate_variations(context_text, exclude_tags, image_count)
+        
+        print(f'✅ PROMPTS GENERATED: {len(variations)} variations created')
         
         # Return updated event with variations
         return {
@@ -32,7 +35,7 @@ def handler(event, context):
         }
         
     except Exception as e:
-        print(f'Prompt generation error: {str(e)}')
+        print(f'❌ PROMPTS ERROR: {str(e)} | execution_id={execution_id} batch_id={batch_id}')
         raise Exception(f'Prompt generation failed: {str(e)}')
 
 def generate_variations(context, exclude_tags, count):

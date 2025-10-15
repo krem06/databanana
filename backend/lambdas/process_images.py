@@ -13,21 +13,22 @@ def handler(event, context):
     Step 5: Download and process completed images from Gemini
     """
     try:
-        print(f'Event: {event}')
-        
         gemini_batch_id = event['gemini_batch_id']
         variations = event['variations']
         cognito_user_id = event['cognito_user_id']
         batch_id = event['batch_id']
         bucket = os.environ.get('S3_BUCKET')
+        execution_id = event.get('execution_id', 'unknown')
+        
+        print(f'💼 PROCESS START: execution_id={execution_id} batch_id={batch_id} job_id={gemini_batch_id}')
         
         # Update progress
-        execution_id = event.get('execution_id')
         update_batch_progress(batch_id, 'ProcessImages', 70, execution_id)
         
         # Get batch results from Gemini
+        print(f'📞 GEMINI FETCH: Retrieving results for job_id={gemini_batch_id}')
         batch_responses = gemini_client.batches.list_outputs(name=gemini_batch_id)
-        print(f"Processing {len(batch_responses)} batch responses")
+        print(f'📄 RESPONSES RECEIVED: {len(batch_responses)} results | execution_id={execution_id}')
         
         images = []
         for i, response in enumerate(batch_responses):
@@ -44,7 +45,7 @@ def handler(event, context):
                         break
                 
                 if image_data:
-                    print(f"Processing image {i}")
+                    print(f'🖼️ PROCESSING IMAGE: index={i} prompt="{variations[i][:30]}..."')
                     
                     # Upload to S3
                     key = f"generated/{cognito_user_id}/{i}_{hash(variations[i])}.png"
@@ -65,14 +66,15 @@ def handler(event, context):
                         'tags': ['generated', 'gemini'],
                         's3_key': key
                     })
+                    print(f'✅ IMAGE SAVED: index={i} s3_key={key}')
                 else:
-                    print(f"No image data returned for variation {i}")
+                    print(f'⚠️ NO IMAGE DATA: variation={i} prompt="{variations[i][:30]}..."')
                     
             except Exception as e:
-                print(f"Error processing batch response {i}: {str(e)}")
+                print(f'❌ IMAGE ERROR: index={i} error={str(e)} | execution_id={execution_id}')
                 # Continue with other images even if one fails
         
-        print(f"Successfully processed {len(images)} images")
+        print(f'✅ PROCESS COMPLETE: {len(images)} images processed | execution_id={execution_id} batch_id={batch_id}')
         
         return {
             **event,
@@ -80,5 +82,5 @@ def handler(event, context):
         }
         
     except Exception as e:
-        print(f'Image processing error: {str(e)}')
+        print(f'❌ PROCESS ERROR: {str(e)} | execution_id={execution_id} batch_id={batch_id}')
         raise Exception(f'Failed to process images: {str(e)}')

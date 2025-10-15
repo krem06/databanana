@@ -11,20 +11,21 @@ def handler(event, context):
     Step 6: Use AWS Rekognition to label and detect objects in images
     """
     try:
-        print(f'Event: {event}')
-        
         images = event['images']
         batch_id = event['batch_id']
         bucket = os.environ.get('S3_BUCKET')
+        execution_id = event.get('execution_id', 'unknown')
+        
+        print(f'🏷️ LABEL START: execution_id={execution_id} batch_id={batch_id} images={len(images)}')
         
         # Update progress
-        execution_id = event.get('execution_id')
         update_batch_progress(batch_id, 'LabelImages', 80, execution_id)
         
         labeled_images = []
         
         for image in images:
             try:
+                print(f'🔍 REKOGNITION: Analyzing image {image["id"]} s3_key={image["s3_key"]}')
                 # Analyze image with Rekognition
                 labels, bounding_boxes = analyze_image_with_rekognition(
                     bucket, image['s3_key']
@@ -39,10 +40,10 @@ def handler(event, context):
                 }
                 
                 labeled_images.append(labeled_image)
-                print(f"Labeled image {image['id']} with {len(labels)} labels")
+                print(f'✅ LABELED: image={image["id"]} labels={len(labels)} boxes={len(bounding_boxes)}')
                 
             except Exception as e:
-                print(f"Error labeling image {image['id']}: {str(e)}")
+                print(f'❌ LABEL ERROR: image={image["id"]} error={str(e)} | execution_id={execution_id}')
                 # Keep image without labels rather than failing the whole batch
                 labeled_images.append({
                     **image,
@@ -57,7 +58,7 @@ def handler(event, context):
         }
         
     except Exception as e:
-        print(f'Image labeling error: {str(e)}')
+        print(f'❌ LABELING ERROR: {str(e)} | execution_id={execution_id} batch_id={batch_id}')
         raise Exception(f'Failed to label images: {str(e)}')
 
 def analyze_image_with_rekognition(bucket, s3_key):
@@ -65,6 +66,7 @@ def analyze_image_with_rekognition(bucket, s3_key):
     Analyze image using AWS Rekognition for labels and object detection
     """
     try:
+        print(f'🤖 REKOGNITION API: bucket={bucket} key={s3_key}')
         # Detect labels
         label_response = rekognition.detect_labels(
             Image={'S3Object': {'Bucket': bucket, 'Name': s3_key}},
@@ -73,6 +75,7 @@ def analyze_image_with_rekognition(bucket, s3_key):
         )
         
         labels = [label['Name'] for label in label_response['Labels']]
+        print(f'🏷️ LABELS FOUND: {len(labels)} labels detected')
         
         # Detect objects and get bounding boxes
         object_response = rekognition.detect_labels(
@@ -95,8 +98,9 @@ def analyze_image_with_rekognition(bucket, s3_key):
                             'height': box['Height']
                         })
         
+        print(f'📊 DETECTION COMPLETE: labels={len(labels)} bounding_boxes={len(bounding_boxes)}')
         return labels, bounding_boxes
         
     except Exception as e:
-        print(f"Rekognition API error: {str(e)}")
+        print(f'❌ REKOGNITION ERROR: {str(e)} | bucket={bucket} key={s3_key}')
         return [], []

@@ -12,14 +12,14 @@ def handler(event, context):
     Step 3: Start Gemini batch job for image generation
     """
     try:
-        print(f'Event: {event}')
-        
         variations = event['variations']
         batch_id = event['batch_id']
         cognito_user_id = event['cognito_user_id']
+        execution_id = event.get('execution_id', 'unknown')
+        
+        print(f'🖼️ START IMAGE GEN: execution_id={execution_id} batch_id={batch_id} prompts={len(variations)}')
         
         # Update progress in database
-        execution_id = event.get('execution_id')
         update_batch_progress(batch_id, 'StartImageGeneration', 30, execution_id)
         
         # Create batch job with Gemini
@@ -32,7 +32,7 @@ def handler(event, context):
                 }]
             })
         
-        print(f'Creating batch job with {len(inline_requests)} requests')
+        print(f'🚀 GEMINI BATCH: Creating job with {len(inline_requests)} requests')
         
         # Create batch job
         batch_job = gemini_client.batches.create(
@@ -43,7 +43,7 @@ def handler(event, context):
             }
         )
         
-        print(f"Batch job created: {batch_job.name}")
+        print(f'✅ BATCH CREATED: job_id={batch_job.name} execution_id={execution_id}')
         
         # Update database with batch job ID
         conn = get_db()
@@ -51,6 +51,7 @@ def handler(event, context):
         cur.execute('UPDATE batches SET gemini_batch_id = %s WHERE id = %s', 
                    (batch_job.name, batch_id))
         conn.commit()
+        print(f'💾 DB UPDATED: batch_id={batch_id} gemini_job={batch_job.name}')
         
         return {
             **event,
@@ -59,6 +60,6 @@ def handler(event, context):
         }
         
     except Exception as e:
-        print(f'Image generation start error: {str(e)}')
+        print(f'❌ IMAGE GEN ERROR: {str(e)} | execution_id={execution_id} batch_id={batch_id}')
         raise Exception(f'Failed to start image generation: {str(e)}')
 
