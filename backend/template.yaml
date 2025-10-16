@@ -19,7 +19,6 @@ Globals:
         ANTHROPIC_API_KEY: !Ref AnthropicApiKey
         GEMINI_API_KEY: !Ref GeminiApiKey
         FRONTEND_URL: !Ref FrontendUrl
-        STATE_MACHINE_ARN: !Ref ImageGenerationStateMachine
         CONNECTIONS_TABLE: !Ref WebSocketConnectionsTable
         WEBSOCKET_API_ID: !Ref WebSocketApi
         WEBSOCKET_STAGE: prod
@@ -32,14 +31,6 @@ Globals:
       Authorizers:
         CognitoAuthorizer:
           UserPoolArn: !GetAtt UserPool.Arn
-
-  # WebSocket API for real-time updates
-  WebSocketApi:
-    Type: AWS::ApiGatewayV2::Api
-    Properties:
-      Name: !Sub "${AWS::StackName}-websocket"
-      ProtocolType: WEBSOCKET
-      RouteSelectionExpression: "$request.body.action"
 
 Parameters:
   DatabaseHost:
@@ -179,6 +170,9 @@ Resources:
       Handler: generate.handler
       Timeout: 60
       MemorySize: 512
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref ImageGenerationStateMachine
       Policies:
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt ImageGenerationStateMachine.Name
@@ -538,13 +532,8 @@ Resources:
             Default: "IncrementRetry"
           IncrementRetry:
             Type: "Pass"
-            Result: 1
-            ResultPath: "$.retryIncrement"
-            Next: "UpdateRetryCount"
-          UpdateRetryCount:
-            Type: "Pass"
             Parameters:
-              "retryCount.$": "$.retryCount + $.retryIncrement"
+              "retryCount.$": "States.MathAdd($.retryCount, 1)"
               "context.$": "$.context"
               "exclude_tags.$": "$.exclude_tags"
               "image_count.$": "$.image_count"
@@ -613,6 +602,13 @@ Resources:
                   - !GetAtt RefundUserFunction.Arn
 
   # WebSocket Infrastructure
+  WebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${AWS::StackName}-websocket"
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: "$request.body.action"
+
   WebSocketConnectionsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -693,6 +689,9 @@ Resources:
       - ConnectRoute
       - DisconnectRoute
       - SubscribeRoute
+      - ConnectIntegration
+      - DisconnectIntegration
+      - SubscribeIntegration
     Properties:
       ApiId: !Ref WebSocketApi
 
@@ -728,3 +727,4 @@ Outputs:
   WebSocketApiUrl:
     Description: "WebSocket API URL for real-time updates"
     Value: !Sub "wss://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  

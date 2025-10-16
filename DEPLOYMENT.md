@@ -1,10 +1,13 @@
 # 🚀 Deployment Guide
 
+Production deployment guide for Data Banana ML dataset generator.
+
 ## Prerequisites
 
-- AWS CLI configured
+- AWS CLI configured with appropriate permissions
 - SAM CLI installed (`pip install aws-sam-cli`)
-- External PostgreSQL database (Neon)
+- External PostgreSQL database (Neon recommended for cost efficiency)
+- API keys: Anthropic (Claude), Google (Gemini), Stripe
 
 ## Step 1: Deploy Backend
 
@@ -92,3 +95,8 @@ Backend functions use:
 
 ## Cost Estimate
 
+## Recommendations
+1. Set up AWS Budgets with alerts at $10, $50, $100
+2. Monitor CloudWatch costs - logs can accumulate
+3. Consider S3 lifecycle policies to archive old images
+4. The external PostgreSQL on Neon is smart - much cheaper than RDS
