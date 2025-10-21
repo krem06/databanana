@@ -3,6 +3,7 @@ import os
 import boto3
 from google import genai
 from process_images import handler as process_images_handler
+from cors_utils import get_cors_headers
 
 # Configure clients
 gemini_client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
@@ -20,7 +21,7 @@ def lambda_handler(event, context):
                 'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({'error': 'job_id is required'})
             }
@@ -35,7 +36,7 @@ def lambda_handler(event, context):
                 'statusCode': 404,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({
                     'error': 'Job not found',
@@ -51,7 +52,7 @@ def lambda_handler(event, context):
                 'statusCode': 200,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({
                     'job_id': job_id,
@@ -65,7 +66,7 @@ def lambda_handler(event, context):
                 'statusCode': 200,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({
                     'job_id': job_id,
@@ -99,9 +100,9 @@ def lambda_handler(event, context):
                 return {
                     'statusCode': 200,
                     'headers': {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    },
+                    'Content-Type': 'application/json',
+                    **get_cors_headers()
+                },
                     'body': json.dumps({
                         'job_id': job_id,
                         'status': 'completed',
@@ -119,9 +120,9 @@ def lambda_handler(event, context):
                 return {
                     'statusCode': 500,
                     'headers': {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    },
+                    'Content-Type': 'application/json',
+                    **get_cors_headers()
+                },
                     'body': json.dumps({
                         'job_id': job_id,
                         'status': 'error',
@@ -135,7 +136,7 @@ def lambda_handler(event, context):
                 'statusCode': 200,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({
                     'job_id': job_id,
@@ -149,7 +150,7 @@ def lambda_handler(event, context):
                 'statusCode': 200,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({
                     'job_id': job_id,
@@ -163,9 +164,9 @@ def lambda_handler(event, context):
         return {
             'statusCode': 500,
             'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+                    'Content-Type': 'application/json',
+                    **get_cors_headers()
+                },
             'body': json.dumps({
                 'error': 'Failed to check job status',
                 'details': str(e)

@@ -2,6 +2,7 @@ import json
 import os
 import time
 from google import genai
+from cors_utils import get_cors_headers
 
 # Configure Gemini client
 gemini_client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
@@ -25,9 +26,7 @@ def lambda_handler(event, context):
                 'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({'error': 'Requests array is required'})
             }
@@ -48,7 +47,7 @@ def lambda_handler(event, context):
                 'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({'error': 'No valid prompts found in requests'})
             }
@@ -77,11 +76,9 @@ def lambda_handler(event, context):
         return {
             'statusCode': 202,  # Accepted
             'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            },
+                    'Content-Type': 'application/json',
+                    **get_cors_headers()
+                },
             'body': json.dumps({
                 'job_id': batch_job.name,
                 'status': 'processing',
@@ -95,9 +92,9 @@ def lambda_handler(event, context):
         return {
             'statusCode': 500,
             'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+                    'Content-Type': 'application/json',
+                    **get_cors_headers()
+                },
             'body': json.dumps({
                 'error': 'Failed to start batch job',
                 'details': str(e)
@@ -108,10 +105,6 @@ def handle_options(event, context):
     """Handle CORS preflight requests"""
     return {
         'statusCode': 200,
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        },
+        'headers': get_cors_headers(),
         'body': ''
     }

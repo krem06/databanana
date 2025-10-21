@@ -1,6 +1,7 @@
 import json
 import os
 from anthropic import Anthropic
+from cors_utils import get_cors_headers
 
 # Initialize Anthropic client
 anthropic_client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
@@ -27,9 +28,7 @@ def lambda_handler(event, context):
                 'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
+                    **get_cors_headers()
                 },
                 'body': json.dumps({
                     'error': 'Prompt is required'
@@ -56,9 +55,7 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
+                **get_cors_headers()
             },
             'body': json.dumps({
                 'response': {
@@ -84,7 +81,7 @@ def lambda_handler(event, context):
             'statusCode': 400,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                **get_cors_headers()
             },
             'body': json.dumps({
                 'error': 'Invalid JSON in request body',
@@ -98,7 +95,7 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                **get_cors_headers()
             },
             'body': json.dumps({
                 'error': 'Claude API call failed',
@@ -110,10 +107,6 @@ def handle_options(event, context):
     """Handle CORS preflight requests"""
     return {
         'statusCode': 200,
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        },
+        'headers': get_cors_headers(),
         'body': ''
     }
