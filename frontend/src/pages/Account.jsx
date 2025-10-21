@@ -6,6 +6,14 @@ import { useSync } from '../hooks/useSync'
 import { offlineStorage } from '../utils/offlineStorage'
 import { useOffline } from '../hooks/useOffline'
 import ImageValidationGallery from '../components/ImageValidationGallery'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { User, Mail, Lock, CreditCard, Download, History, LogOut, Shield, CheckCircle, AlertCircle, Loader2, Plus, Database, Wallet } from 'lucide-react'
 
 function Account() {
   const [credits, setCredits] = useState(0)
@@ -160,233 +168,410 @@ function Account() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Account Details</h2>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email:</label>
-            <input 
-              type="email" 
-              value={userEmail}
-              className="input-field bg-gray-50 text-gray-500"
-              disabled
-            />
-            <p className="text-sm text-gray-500 mt-1">Email cannot be changed</p>
-          </div>
-          
-          <form onSubmit={handlePasswordUpdate}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Current Password:</label>
-                <input 
-                  type="password" 
-                  value={passwordForm.current}
-                  onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
-                  className="input-field"
-                  required
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">New Password:</label>
-                <input 
-                  type="password" 
-                  value={passwordForm.new}
-                  onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
-                  className="input-field"
-                  required
-                  minLength={6}
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password:</label>
-                <input 
-                  type="password" 
-                  value={passwordForm.confirm}
-                  onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
-                  className={`input-field ${
-                    passwordForm.new && passwordForm.confirm && passwordForm.new !== passwordForm.confirm 
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                      : ''
-                  }`}
-                  required
-                  minLength={6}
-                />
-                {passwordForm.new && passwordForm.confirm && passwordForm.new !== passwordForm.confirm && (
-                  <p className="text-red-600 text-sm mt-1">
-                    Passwords do not match
-                  </p>
-                )}
-              </div>
-              
-              {passwordMessage && (
-                <p className={`text-sm mb-4 ${
-                  passwordMessage.includes('successfully') ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {passwordMessage}
-                </p>
-              )}
-              
-              <button 
-                type="submit" 
-                className={`w-full ${isUpdatingPassword ? 'bg-gray-400 cursor-not-allowed' : 'btn-primary'}`}
-                disabled={isUpdatingPassword}
-              >
-                {isUpdatingPassword ? 'Updating...' : 'Update Password'}
-              </button>
-          </form>
-          
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <button 
-              onClick={logout}
-              className="w-full btn-secondary text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-        
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Credits</h2>
-          <p className="text-lg mb-2">Current balance: <strong>${credits}</strong></p>
-          <p className="text-gray-600 mb-6">100 images = $5</p>
-          
-          {paymentMessage && (
-            <div className={`p-3 mb-4 rounded-lg border ${
-              paymentMessage.includes('successful') 
-                ? 'bg-green-50 border-green-200 text-green-800' 
-                : 'bg-red-50 border-red-200 text-red-800'
-            }`}>
-              {paymentMessage}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <User className="h-6 w-6 text-white" />
             </div>
-          )}
-          
-          <div className="flex flex-wrap gap-3">
-            <button 
-              className={`flex-1 ${processingPayment === 5 ? 'bg-gray-400 cursor-not-allowed' : 'btn-primary'}`}
-              onClick={() => handlePayment(5)}
-              disabled={processingPayment === 5}
-            >
-              {processingPayment === 5 ? 'Processing...' : 'Add $5'}
-            </button>
-            <button 
-              className={`flex-1 ${processingPayment === 10 ? 'bg-gray-400 cursor-not-allowed' : 'btn-primary'}`}
-              onClick={() => handlePayment(10)}
-              disabled={processingPayment === 10}
-            >
-              {processingPayment === 10 ? 'Processing...' : 'Add $10'}
-            </button>
-            <button 
-              className={`flex-1 ${processingPayment === 25 ? 'bg-gray-400 cursor-not-allowed' : 'btn-primary'}`}
-              onClick={() => handlePayment(25)}
-              disabled={processingPayment === 25}
-            >
-              {processingPayment === 25 ? 'Processing...' : 'Add $25'}
-            </button>
+            <div>
+              <h1 className="text-3xl font-bold">Account Settings</h1>
+              <p className="text-muted-foreground">Manage your profile, security, and billing preferences</p>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="card p-6 mt-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Export Datasets</h2>
-        <p className="text-gray-600 mb-6">
-          Export your curated datasets in standard machine learning formats
-        </p>
-        
-        {datasets.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No datasets available for export. Generate some images first.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {datasets.map((dataset) => {
-              const totalSelectedInDataset = dataset.batches.reduce((sum, batch) => 
-                sum + batch.images.filter(img => validationState.selectedImages.has(img.id)).length, 0)
-              const exportCost = totalSelectedInDataset * 0.10
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Account Details */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <CardTitle>Account Details</CardTitle>
+                  <CardDescription>Your profile and security settings</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Address
+                </Label>
+                <Input 
+                  id="email"
+                  type="email" 
+                  value={userEmail}
+                  disabled
+                  className="bg-muted text-muted-foreground"
+                />
+                <p className="text-sm text-muted-foreground">Email cannot be changed</p>
+              </div>
               
-              return (
-                <div key={dataset.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        {dataset.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {dataset.batches.length} batches • {totalSelectedInDataset} selected images • Cost: ${exportCost.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Created {formatDate(new Date(dataset.created_at))}
-                    </div>
-                  </div>
-                  
-                  {totalSelectedInDataset === 0 ? (
-                    <p className="text-sm text-gray-500 italic">No images selected for export</p>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => handleDatasetExport(dataset, 'coco')}
-                        disabled={isExporting}
-                        className="btn-secondary text-sm"
-                      >
-                        Export COCO
-                      </button>
-                      <button 
-                        onClick={() => handleDatasetExport(dataset, 'yolo')}
-                        disabled={isExporting}
-                        className="btn-secondary text-sm"
-                      >
-                        Export YOLO
-                      </button>
-                      <button 
-                        onClick={() => handleDatasetExport(dataset, 'pascal')}
-                        disabled={isExporting}
-                        className="btn-secondary text-sm"
-                      >
-                        Export Pascal VOC
-                      </button>
-                      <button 
-                        onClick={() => handleDatasetExport(dataset, 'csv')}
-                        disabled={isExporting}
-                        className="btn-secondary text-sm"
-                      >
-                        Export CSV
-                      </button>
-                    </div>
+              <Separator />
+          
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Current Password
+                  </Label>
+                  <Input 
+                    id="currentPassword"
+                    type="password" 
+                    value={passwordForm.current}
+                    onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
+                    placeholder="Enter your current password"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    New Password
+                  </Label>
+                  <Input 
+                    id="newPassword"
+                    type="password" 
+                    value={passwordForm.new}
+                    onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+                    placeholder="Create a new secure password"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Confirm New Password
+                  </Label>
+                  <Input 
+                    id="confirmPassword"
+                    type="password" 
+                    value={passwordForm.confirm}
+                    onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                    placeholder="Confirm your new password"
+                    required
+                    minLength={6}
+                    className={passwordForm.new && passwordForm.confirm && passwordForm.new !== passwordForm.confirm ? 'border-destructive' : ''}
+                  />
+                  {passwordForm.new && passwordForm.confirm && passwordForm.new !== passwordForm.confirm && (
+                    <p className="text-destructive text-sm flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Passwords do not match
+                    </p>
                   )}
                 </div>
-              )
-            })}
-          </div>
-        )}
+                
+                {passwordMessage && (
+                  <Alert variant={passwordMessage.includes('successfully') ? 'default' : 'destructive'}>
+                    {passwordMessage.includes('successfully') ? 
+                      <CheckCircle className="h-4 w-4 text-green-600" /> : 
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    }
+                    <AlertDescription>
+                      {passwordMessage}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isUpdatingPassword}
+                  size="lg"
+                >
+                  {isUpdatingPassword ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4 mr-2" />
+                      Update Password
+                    </>
+                  )}
+                </Button>
+              </form>
+          
+              <Separator />
+              
+              <Button 
+                onClick={logout}
+                variant="destructive"
+                className="w-full"
+                size="lg"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </CardContent>
+          </Card>
         
-        <div className="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium text-gray-900 mb-2">Export Formats:</h4>
-          <ul className="space-y-1">
-            <li>• <strong>COCO:</strong> JSON format with bounding boxes and metadata</li>
-            <li>• <strong>YOLO:</strong> TXT files with normalized coordinates</li>
-            <li>• <strong>Pascal VOC:</strong> XML annotations with image metadata</li>
-            <li>• <strong>CSV:</strong> Simple tabular format with image paths and labels</li>
-          </ul>
-        </div>
+          {/* Credits & Billing */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                  <Wallet className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <CardTitle>Credits & Billing</CardTitle>
+                  <CardDescription>Manage your account balance and payments</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  ${credits.toFixed(2)}
+                </div>
+                <p className="text-muted-foreground">Current Balance</p>
+                <Badge variant="outline" className="mt-2">
+                  100 images = $5
+                </Badge>
+              </div>
+              
+              {paymentMessage && (
+                <Alert variant={paymentMessage.includes('successful') ? 'default' : 'destructive'}>
+                  {paymentMessage.includes('successful') ? 
+                    <CheckCircle className="h-4 w-4 text-green-600" /> : 
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                  }
+                  <AlertDescription>
+                    {paymentMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Add Credits
+                </Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <Button 
+                    variant="outline"
+                    onClick={() => handlePayment(5)}
+                    disabled={processingPayment === 5}
+                    className="h-12 flex-col space-y-1"
+                  >
+                    {processingPayment === 5 ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span className="font-semibold">$5</span>
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => handlePayment(10)}
+                    disabled={processingPayment === 10}
+                    className="h-12 flex-col space-y-1 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    {processingPayment === 10 ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span className="font-semibold">$10</span>
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => handlePayment(25)}
+                    disabled={processingPayment === 25}
+                    className="h-12 flex-col space-y-1"
+                  >
+                    {processingPayment === 25 ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span className="font-semibold">$25</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
       </div>
-
-      <div className="card p-6 mt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Generation History</h2>
-          {datasets.length > 0 && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              💡 Click images to select • Shift+Click to reject
+      
+        {/* Export Datasets */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Download className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <CardTitle>Export Datasets</CardTitle>
+                <CardDescription>Export your curated datasets in standard machine learning formats</CardDescription>
+              </div>
             </div>
-          )}
-        </div>
+          </CardHeader>
+          <CardContent>
         
-        <ImageValidationGallery
-          datasets={datasets}
-          showDatasetHeaders={true}
-          onSelectionChange={setValidationState}
-        />
+            {datasets.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Database className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">No datasets available for export. Generate some images first.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {datasets.map((dataset) => {
+                  const totalSelectedInDataset = dataset.batches.reduce((sum, batch) => 
+                    sum + batch.images.filter(img => validationState.selectedImages.has(img.id)).length, 0)
+                  const exportCost = totalSelectedInDataset * 0.10
+                  
+                  return (
+                    <Card key={dataset.id} className="border-2 border-muted hover:border-primary/50 transition-colors">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                              <Database className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{dataset.name}</h3>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span>{dataset.batches.length} batches</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {totalSelectedInDataset} selected
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  ${exportCost.toFixed(2)} cost
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <Badge variant="secondary">
+                            {formatDate(new Date(dataset.created_at))}
+                          </Badge>
+                        </div>
+                        
+                        {totalSelectedInDataset === 0 ? (
+                          <p className="text-sm text-muted-foreground italic bg-muted p-3 rounded-lg">
+                            No images selected for export - use the validation gallery below to select images
+                          </p>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDatasetExport(dataset, 'coco')}
+                              disabled={isExporting}
+                              className="h-10"
+                            >
+                              {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'COCO'}
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDatasetExport(dataset, 'yolo')}
+                              disabled={isExporting}
+                              className="h-10"
+                            >
+                              {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'YOLO'}
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDatasetExport(dataset, 'pascal')}
+                              disabled={isExporting}
+                              className="h-10"
+                            >
+                              {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Pascal VOC'}
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDatasetExport(dataset, 'csv')}
+                              disabled={isExporting}
+                              className="h-10"
+                            >
+                              {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'CSV'}
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+        
+            <Card className="mt-6 bg-muted/50">
+              <CardContent className="p-6">
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Export Formats
+                </h4>
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <Badge variant="outline" className="mt-1">COCO</Badge>
+                    <span className="text-muted-foreground">JSON format with bounding boxes and metadata</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Badge variant="outline" className="mt-1">YOLO</Badge>
+                    <span className="text-muted-foreground">TXT files with normalized coordinates</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Badge variant="outline" className="mt-1">Pascal</Badge>
+                    <span className="text-muted-foreground">XML annotations with image metadata</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Badge variant="outline" className="mt-1">CSV</Badge>
+                    <span className="text-muted-foreground">Simple tabular format with image paths and labels</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+
+        {/* Generation History */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <History className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <CardTitle>Generation History</CardTitle>
+                  <CardDescription>Review and validate your generated images</CardDescription>
+                </div>
+              </div>
+              {datasets.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  💡 Click images to select • Shift+Click to reject
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ImageValidationGallery
+              datasets={datasets}
+              showDatasetHeaders={true}
+              onSelectionChange={setValidationState}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

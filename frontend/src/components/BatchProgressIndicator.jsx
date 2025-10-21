@@ -52,7 +52,7 @@ function BatchProgressIndicator({ batchId, progress, onComplete, onError }) {
   const currentStepIndex = steps.findIndex(step => step.key === current_step)
 
   return (
-    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -61,14 +61,14 @@ function BatchProgressIndicator({ batchId, progress, onComplete, onError }) {
             Batch {batchId.slice(-8)} • {status === 'completed' ? 'Completed' : status === 'failed' ? 'Failed' : 'Processing'}
           </span>
           {image_count && (
-            <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
               {image_count} images
             </span>
           )}
         </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
           {isExpanded ? '▼' : '▶'}
         </button>
@@ -78,11 +78,11 @@ function BatchProgressIndicator({ batchId, progress, onComplete, onError }) {
         <>
           {/* Progress Bar */}
           <div className="mb-3">
-            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
               <span>{message || 'Processing...'}</span>
               <span>{percentage || 0}%</span>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div className="w-full bg-muted rounded-full h-2">
               <div 
                 className={`h-2 rounded-full transition-all duration-500 ${getProgressBarColor()}`}
                 style={{ width: `${percentage || 0}%` }}
@@ -103,14 +103,14 @@ function BatchProgressIndicator({ batchId, progress, onComplete, onError }) {
                     isFailed ? 'bg-red-500 text-white' :
                     isActive ? 'bg-blue-500 text-white animate-pulse' :
                     isCompleted ? 'bg-green-500 text-white' :
-                    'bg-gray-200 dark:bg-gray-600 text-gray-500'
+                    'bg-muted text-muted-foreground'
                   }`}>
                     {isFailed ? '✗' : isCompleted ? '✓' : step.icon}
                   </div>
                   <span className={`text-xs ${
-                    isActive ? 'text-blue-600 dark:text-blue-400 font-medium' :
-                    isCompleted ? 'text-green-600 dark:text-green-400' :
-                    'text-gray-400'
+                    isActive ? 'text-blue-600 font-medium' :
+                    isCompleted ? 'text-green-600' :
+                    'text-muted-foreground'
                   }`}>
                     {step.label}
                   </span>

@@ -1,5 +1,12 @@
 import { useState } from 'react'
 import { useAuth } from '../AuthContext'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { X, Mail, Lock, Shield, Key, CheckCircle, AlertCircle, Loader2, UserPlus, LogIn } from 'lucide-react'
 
 export default function AuthModal({ isOpen, onClose }) {
   const [mode, setMode] = useState('login') // 'login', 'signup', 'confirm', 'forgot', 'reset'
@@ -54,173 +61,268 @@ export default function AuthModal({ isOpen, onClose }) {
     }
   }
 
+  const getModeConfig = () => {
+    const configs = {
+      login: { title: 'Welcome Back', description: 'Sign in to your account', icon: LogIn, color: 'blue' },
+      signup: { title: 'Create Account', description: 'Join Data Banana today', icon: UserPlus, color: 'green' },
+      confirm: { title: 'Verify Email', description: 'Enter the code sent to your email', icon: Shield, color: 'orange' },
+      forgot: { title: 'Forgot Password', description: 'We\'ll send you a reset code', icon: Key, color: 'purple' },
+      reset: { title: 'Reset Password', description: 'Create your new password', icon: Lock, color: 'red' }
+    }
+    return configs[mode] || configs.login
+  }
+
+  const config = getModeConfig()
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="card p-6 w-full max-w-md mx-4">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">{mode === 'login' ? 'Login' : mode === 'signup' ? 'Sign Up' : mode === 'confirm' ? 'Confirm Email' : mode === 'forgot' ? 'Forgot Password' : 'Reset Password'}</h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          {mode !== 'confirm' && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email:</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
-                required
-                disabled={mode === 'confirm'}
-              />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95">
+        <CardHeader className="text-center space-y-4 pb-4">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+                config.color === 'blue' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
+                config.color === 'green' ? 'bg-gradient-to-br from-green-500 to-green-600' :
+                config.color === 'orange' ? 'bg-gradient-to-br from-orange-500 to-orange-600' :
+                config.color === 'purple' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
+                'bg-gradient-to-br from-red-500 to-red-600'
+              }`}>
+                <config.icon className="h-6 w-6 text-white" />
+              </div>
+              <CardTitle className="text-2xl">{config.title}</CardTitle>
+              <CardDescription className="text-base mt-2">{config.description}</CardDescription>
             </div>
-          )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onClose}
+              className="h-8 w-8 rounded-full hover:bg-muted"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
 
-          {mode === 'confirm' && (
-            <div className="mb-4">
-              <p className="mb-4 text-gray-600">
-                Enter the confirmation code sent to <strong>{email}</strong>
-              </p>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Confirmation Code:</label>
-              <input
-                type="text"
-                value={confirmationCode}
-                onChange={(e) => setConfirmationCode(e.target.value)}
-                className="input-field"
-                required
-                placeholder="123456"
-              />
-            </div>
-          )}
-
-          {mode === 'reset' && (
-            <>
-              <div className="mb-4">
-                <p className="mb-4 text-gray-600">
-                  Enter the reset code sent to <strong>{email}</strong> and your new password
-                </p>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Reset Code:</label>
-                <input
-                  type="text"
-                  value={confirmationCode}
-                  onChange={(e) => setConfirmationCode(e.target.value)}
-                  className="input-field"
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode !== 'confirm' && (
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
                   required
-                  placeholder="123456"
+                  disabled={mode === 'confirm'}
+                  className="h-12"
                 />
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">New Password:</label>
-                <input
+            )}
+
+            {mode === 'confirm' && (
+              <div className="space-y-4">
+                <Alert>
+                  <Mail className="h-4 w-4" />
+                  <AlertDescription>
+                    Enter the confirmation code sent to <strong>{email}</strong>
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmationCode" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Confirmation Code
+                  </Label>
+                  <Input
+                    id="confirmationCode"
+                    type="text"
+                    value={confirmationCode}
+                    onChange={(e) => setConfirmationCode(e.target.value)}
+                    placeholder="123456"
+                    required
+                    className="h-12 text-center text-lg font-mono"
+                  />
+                </div>
+              </div>
+            )}
+
+            {mode === 'reset' && (
+              <div className="space-y-4">
+                <Alert>
+                  <Key className="h-4 w-4" />
+                  <AlertDescription>
+                    Enter the reset code sent to <strong>{email}</strong> and create a new password
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <Label htmlFor="resetCode" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Reset Code
+                  </Label>
+                  <Input
+                    id="resetCode"
+                    type="text"
+                    value={confirmationCode}
+                    onChange={(e) => setConfirmationCode(e.target.value)}
+                    placeholder="123456"
+                    required
+                    className="h-12 text-center text-lg font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    New Password
+                  </Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Create a secure password"
+                    required
+                    minLength={6}
+                    className="h-12"
+                  />
+                </div>
+              </div>
+            )}
+
+            {mode !== 'confirm' && mode !== 'forgot' && mode !== 'reset' && (
+              <div className="space-y-2">
+                <Label htmlFor="password" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Password
+                </Label>
+                <Input
+                  id="password"
                   type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="input-field"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'signup' ? 'Create a secure password' : 'Enter your password'}
                   required
                   minLength={6}
+                  className="h-12"
                 />
+              </div>
+            )}
+
+            {message && (
+              <Alert variant={message.includes('Check your email') || message.includes('confirmed') || message.includes('successfully') ? 'default' : 'destructive'}>
+                {message.includes('Check your email') || message.includes('confirmed') || message.includes('successfully') ? 
+                  <CheckCircle className="h-4 w-4 text-green-600" /> : 
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                }
+                <AlertDescription>
+                  {message}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-medium"
+              disabled={loading}
+              size="lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <config.icon className="h-4 w-4 mr-2" />
+                  {mode === 'login' ? 'Sign In' : 
+                   mode === 'signup' ? 'Create Account' : 
+                   mode === 'confirm' ? 'Verify Email' : 
+                   mode === 'forgot' ? 'Send Reset Code' : 
+                   'Update Password'}
+                </>
+              )}
+            </Button>
+          </form>
+
+          {mode !== 'confirm' && mode !== 'forgot' && mode !== 'reset' && (
+            <>
+              <Separator className="my-6" />
+              <div className="text-center space-y-3">
+                {mode === 'login' ? (
+                  <>
+                    <p className="text-muted-foreground">
+                      Don't have an account?{' '}
+                      <Button
+                        variant="link"
+                        onClick={() => setMode('signup')}
+                        className="p-0 h-auto font-medium text-primary"
+                      >
+                        Sign up
+                      </Button>
+                    </p>
+                    <p>
+                      <Button
+                        variant="link"
+                        onClick={() => setMode('forgot')}
+                        className="p-0 h-auto text-muted-foreground hover:text-primary"
+                      >
+                        Forgot password?
+                      </Button>
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Already have an account?{' '}
+                    <Button
+                      variant="link"
+                      onClick={() => setMode('login')}
+                      className="p-0 h-auto font-medium text-primary"
+                    >
+                      Sign in
+                    </Button>
+                  </p>
+                )}
               </div>
             </>
           )}
 
-          {mode !== 'confirm' && mode !== 'forgot' && mode !== 'reset' && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password:</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
-                required
-                minLength={6}
-              />
-            </div>
-          )}
-
-          {message && (
-            <p className={`text-sm mb-4 ${
-              message.includes('Check your email') || message.includes('confirmed') || message.includes('successfully')
-                ? 'text-green-600' 
-                : 'text-red-600'
-            }`}>
-              {message}
-            </p>
-          )}
-
-          <button 
-            type="submit" 
-            className={`w-full mb-4 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'btn-primary'}`}
-            disabled={loading}
-          >
-            {loading ? 'Loading...' : (mode === 'login' ? 'Login' : mode === 'signup' ? 'Sign Up' : mode === 'confirm' ? 'Confirm' : mode === 'forgot' ? 'Send Reset Code' : 'Reset Password')}
-          </button>
-        </form>
-
-        {mode !== 'confirm' && mode !== 'forgot' && mode !== 'reset' && (
-          <div className="text-center text-sm">
-            {mode === 'login' ? (
-              <>
-                <p>
-                  Don't have an account?{' '}
-                  <button
+          {mode === 'confirm' && (
+            <>
+              <Separator className="my-6" />
+              <div className="text-center">
+                <p className="text-muted-foreground">
+                  Didn't receive the code?{' '}
+                  <Button
+                    variant="link"
                     onClick={() => setMode('signup')}
-                    className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
+                    className="p-0 h-auto font-medium text-primary"
                   >
-                    Sign up
-                  </button>
+                    Try again
+                  </Button>
                 </p>
-                <p className="mt-2">
-                  <button
-                    onClick={() => setMode('forgot')}
-                    className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
-                  >
-                    Forgot password?
-                  </button>
-                </p>
-              </>
-            ) : (
-              <p>
-                Already have an account?{' '}
-                <button
+              </div>
+            </>
+          )}
+
+          {mode === 'forgot' && (
+            <>
+              <Separator className="my-6" />
+              <div className="text-center">
+                <Button
+                  variant="link"
                   onClick={() => setMode('login')}
-                  className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
+                  className="p-0 h-auto text-muted-foreground hover:text-primary"
                 >
-                  Login
-                </button>
-              </p>
-            )}
-          </div>
-        )}
-
-        {mode === 'confirm' && (
-          <p className="text-center text-sm">
-            Didn't receive the code?{' '}
-            <button
-              onClick={() => setMode('signup')}
-              className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
-            >
-              Try again
-            </button>
-          </p>
-        )}
-
-        {mode === 'forgot' && (
-          <p className="text-center text-sm">
-            <button
-              onClick={() => setMode('login')}
-              className="text-blue-600 hover:text-blue-700 underline bg-transparent border-none cursor-pointer"
-            >
-              Back to login
-            </button>
-          </p>
-        )}
-      </div>
+                  Back to sign in
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

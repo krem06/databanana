@@ -7,7 +7,7 @@ function LazyImage({ src, alt, className, style }) {
   return (
     <div className={`relative ${className || ''}`} style={style}>
       {!loaded && !error && (
-        <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+        <div className="absolute inset-0 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
           Loading...
         </div>
       )}

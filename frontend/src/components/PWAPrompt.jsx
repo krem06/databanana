@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
 
 function PWAPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
@@ -40,27 +41,30 @@ function PWAPrompt() {
   if (!showPrompt) return null
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-80 bg-background border border-border rounded-lg shadow-lg p-4 z-50">
       <div className="flex items-start gap-3">
         <div className="text-2xl">📱</div>
         <div className="flex-1">
-          <h3 className="font-medium text-gray-900 dark:text-white text-sm">Install Data Banana</h3>
-          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+          <h3 className="font-medium text-foreground text-sm">Install Data Banana</h3>
+          <p className="text-xs text-muted-foreground mt-1">
             Install as app for better offline experience and faster access
           </p>
           <div className="flex gap-2 mt-3">
-            <button
+            <Button
               onClick={handleInstall}
-              className="btn-primary text-xs px-3 py-1"
+              size="sm"
+              className="text-xs h-7"
             >
               Install
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleDismiss}
-              className="btn-secondary text-xs px-3 py-1"
+              variant="outline"
+              size="sm"
+              className="text-xs h-7"
             >
               Later
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -6,6 +6,14 @@ import { useWebSocketProgress } from '../hooks/useWebSocketProgress'
 import ImageValidationGallery from '../components/ImageValidationGallery'
 import BatchProgressIndicator from '../components/BatchProgressIndicator'
 import ConnectionStatus from '../components/ConnectionStatus'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
+import { Zap, Download, RefreshCw, Database, Images, Loader2, ImageIcon, X, Plus, Minus, ZoomIn, ZoomOut } from 'lucide-react'
 
 function Generate() {
   // Form state
@@ -352,94 +360,138 @@ function Generate() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
       <div className="max-w-6xl mx-auto p-6">
         {/* Generation Form */}
-        <div className="card p-4 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">Generate</h1>
-              {activeDatasetName && (
-                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                  📁 {activeDatasetName}
-                </span>
-              )}
-              {batches.length > 0 && (
-                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                  ✓ Auto-saved
-                </span>
-              )}
-              <ConnectionStatus status={connectionStatus} />
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Generate Dataset</CardTitle>
+                  <CardDescription>Create diverse, labeled images for ML training</CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {activeDatasetName && (
+                  <Badge variant="secondary" className="">
+                    <Database className="h-3 w-3 mr-1" />
+                    {activeDatasetName}
+                  </Badge>
+                )}
+                {batches.length > 0 && (
+                  <Badge variant="secondary" className="">
+                    ✓ Auto-saved
+                  </Badge>
+                )}
+                <ConnectionStatus status={connectionStatus} />
+                <Badge variant="outline" className="font-medium">
+                  ${userCredits.toFixed(2)} credits
+                </Badge>
+              </div>
             </div>
-            <span className="text-sm text-gray-600">
-              Credits: <span className="font-medium text-blue-600">${userCredits.toFixed(2)}</span>
-            </span>
-          </div>
+          </CardHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-            <div className="md:col-span-2">
-              <input 
-                type="text" 
-                value={context}
-                onChange={(e) => setContext(e.target.value.slice(0, 80))}
-                placeholder="Scene description (e.g., cat on windowsill)..."
-                maxLength={80}
-                className="input-field text-sm w-full"
-              />
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="context">Scene Description</Label>
+                <Input 
+                  id="context"
+                  type="text" 
+                  value={context}
+                  onChange={(e) => setContext(e.target.value.slice(0, 80))}
+                  placeholder="e.g., cat on windowsill, modern office workspace..."
+                  maxLength={80}
+                  className="w-full"
+                />
+                <div className="text-xs text-muted-foreground">
+                  {context.length}/80 characters
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="excludeTags">Exclude Tags</Label>
+                <Input 
+                  id="excludeTags"
+                  type="text" 
+                  value={excludeTags}
+                  onChange={(e) => setExcludeTags(e.target.value)}
+                  placeholder="blur, cartoon..."
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="imageCount">Image Count</Label>
+                <Input 
+                  id="imageCount"
+                  type="number" 
+                  value={imageCount}
+                  onChange={(e) => setImageCount(Math.min(Math.max(1, parseInt(e.target.value) || 1), 50))}
+                  min="1"
+                  max="50"
+                  className="text-center w-full"
+                />
+              </div>
             </div>
-            <div>
-              <input 
-                type="text" 
-                value={excludeTags}
-                onChange={(e) => setExcludeTags(e.target.value)}
-                placeholder="Exclude tags..."
-                className="input-field text-sm w-full"
-              />
-            </div>
-            <div>
-              <input 
-                type="number" 
-                value={imageCount}
-                onChange={(e) => setImageCount(Math.min(Math.max(1, parseInt(e.target.value) || 1), 50))}
-                min="1"
-                max="50"
-                className="input-field text-center text-sm w-full"
-                placeholder="Count"
-              />
-            </div>
-          </div>
+            
+            <Separator />
 
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-500">
-              {context.length}/80 chars • Cost: ${calculateCost()} • 
-              {canAfford() ? 
-                <span className="text-green-600"> ✓ Sufficient</span> : 
-                <span className="text-red-600"> ✗ Insufficient</span>
-              }
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="text-sm">
+                  <span className="font-medium">Cost:</span>
+                  <Badge variant="outline" className="ml-2">
+                    ${calculateCost()}
+                  </Badge>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Status:</span>
+                  {canAfford() ? 
+                    <Badge variant="secondary" className="ml-2 ">
+                      ✓ Sufficient Credits
+                    </Badge> : 
+                    <Badge variant="destructive" className="ml-2">
+                      ✗ Insufficient Credits
+                    </Badge>
+                  }
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetForm}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reset
+                </Button>
+                <Button 
+                  onClick={handleGenerate}
+                  disabled={generating || context.length < 10 || isOffline || !canAfford()}
+                  size="lg"
+                  className={generating ? 'relative' : ''}
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : isOffline ? (
+                    'Offline - Cannot Generate'
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Generate {imageCount} Images
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={resetForm}
-                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 hover:bg-gray-100 rounded"
-              >
-                Reset
-              </button>
-              <button 
-                onClick={handleGenerate}
-                disabled={generating || context.length < 10 || isOffline || !canAfford()}
-                className={`text-sm px-4 py-2 rounded ${
-                  generating || context.length < 10 || isOffline || !canAfford()
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                    : 'btn-primary'
-                }`}
-              >
-                {generating ? 'Generating...' : 
-                 isOffline ? 'Offline - Cannot Generate' : 
-                 `Generate ${imageCount}`}
-              </button>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Real-time Progress Indicators */}
         {Array.from(progressData.entries()).map(([batchId, progress]) => (
@@ -454,117 +506,144 @@ function Generate() {
 
         {/* Image Gallery */}
         {batches.length > 0 && (
-          <div className="card p-6">
-            <ImageValidationGallery
-              datasets={[{ 
-                id: 'current-session', 
-                name: activeDatasetName || 'Current Session',
-                created_at: new Date().toISOString(),
-                batches: batches
-              }]}
-              showDatasetHeaders={true}
-              onSelectionChange={setValidationState}
-              exposeValidationMethods={validationRef}
-              onImageClick={openImageModal}
-              onSaveDataset={handleSaveDataset}
-              initialValidationState={validationState}
-            />
-          </div>
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <ImageValidationGallery
+                datasets={[{ 
+                  id: 'current-session', 
+                  name: activeDatasetName || 'Current Session',
+                  created_at: new Date().toISOString(),
+                  batches: batches
+                }]}
+                showDatasetHeaders={true}
+                onSelectionChange={setValidationState}
+                exposeValidationMethods={validationRef}
+                onImageClick={openImageModal}
+                onSaveDataset={handleSaveDataset}
+                initialValidationState={validationState}
+              />
+            </CardContent>
+          </Card>
         )}
 
         {/* Export Summary */}
         {batches.length > 0 && (
-          <div className="card p-6 sticky bottom-6 bg-white border-2 border-blue-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Total Images:</span> {batches.reduce((total, batch) => total + batch.images.length, 0)}
+          <Card className="sticky bottom-6 border-2 border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <Images className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Total:</span>
+                    <Badge variant="outline">
+                      {batches.reduce((total, batch) => total + batch.images.length, 0)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Selected:</span>
+                    <Badge variant="secondary" className="">
+                      {validationState.selectedImages.size}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Rejected:</span>
+                    <Badge variant="secondary" className="">
+                      {validationState.rejectedImages.size}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Export Cost:</span>
+                    <Badge variant="outline">
+                      ${(validationState.selectedImages.size * 0.10).toFixed(2)}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="text-sm text-green-600">
-                  <span className="font-medium">Selected:</span> {validationState.selectedImages.size}
-                </div>
-                <div className="text-sm text-red-500">
-                  <span className="font-medium">Rejected:</span> {validationState.rejectedImages.size}
-                </div>
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Export Cost:</span> ${(validationState.selectedImages.size * 0.10).toFixed(2)}
-                </div>
+                <Button 
+                  onClick={handleExport} 
+                  disabled={validationState.selectedImages.size === 0}
+                  size="lg"
+                  className="font-medium"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export {validationState.selectedImages.size} Images
+                </Button>
               </div>
-              <button 
-                onClick={handleExport} 
-                disabled={validationState.selectedImages.size === 0}
-                className={`font-medium px-6 py-3 rounded-lg transition-colors ${
-                  validationState.selectedImages.size > 0 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                Export {validationState.selectedImages.size} Images
-              </button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Empty State */}
         {batches.length === 0 && !generating && (
-          <div className="card p-16 text-center">
-            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2-2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ready to generate your dataset?</h3>
-            <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto">Describe your scene above and click generate to start creating high-quality images for your training dataset.</p>
-          </div>
+          <Card className="text-center">
+            <CardContent className="p-16">
+              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+                <ImageIcon className="w-12 h-12 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-xl mb-2">Ready to generate your dataset?</CardTitle>
+              <CardDescription className="max-w-md mx-auto">
+                Describe your scene above and click generate to start creating high-quality images for your training dataset.
+              </CardDescription>
+            </CardContent>
+          </Card>
         )}
 
         {/* Loading State (only show if no progress data available) */}
         {generating && progressData.size === 0 && (
-          <div className="card p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-lg font-medium text-gray-700">Starting generation process...</p>
-            </div>
-            <p className="text-sm text-gray-500">Connecting to real-time progress updates...</p>
-          </div>
+          <Card>
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <CardTitle className="text-lg">Starting generation process...</CardTitle>
+              </div>
+              <CardDescription>Connecting to real-time progress updates...</CardDescription>
+            </CardContent>
+          </Card>
         )}
       </div>
 
       {/* Image Modal */}
       {viewedImage && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
           onClick={closeImageModal}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onWheel={handleWheel}
         >
           {/* Top Controls */}
-          <div className="absolute top-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-black bg-opacity-80 text-white px-6 py-3 rounded-full z-10">
-            <span className="text-sm">{getCurrentImageIndex() + 1} / {getAllImages().length}</span>
-            <div className="w-px h-5 bg-white bg-opacity-30"></div>
-            <span className="text-sm">Zoom: {zoomLevel.toFixed(1)}x</span>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(1, prev - 0.5)) }}
-              className="w-8 h-8 border border-white border-opacity-50 text-white rounded hover:bg-white hover:bg-opacity-20 transition-colors flex items-center justify-center"
-            >
-              -
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(4, prev + 0.5)) }}
-              className="w-8 h-8 border border-white border-opacity-50 text-white rounded hover:bg-white hover:bg-opacity-20 transition-colors flex items-center justify-center"
-            >
-              +
-            </button>
-          </div>
+          <Card className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black/90 border-white/20 z-10">
+            <CardContent className="flex items-center gap-4 px-6 py-3 text-white">
+              <span className="text-sm">{getCurrentImageIndex() + 1} / {getAllImages().length}</span>
+              <Separator orientation="vertical" className="h-5 bg-white/30" />
+              <span className="text-sm">Zoom: {zoomLevel.toFixed(1)}x</span>
+              <Button 
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 border border-white/50 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.max(1, prev - 0.5)) }}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 border border-white/50 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); setZoomLevel(prev => Math.min(4, prev + 0.5)) }}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Close Button */}
-          <button 
+          <Button 
+            variant="ghost"
+            size="icon"
+            className="absolute top-6 right-6 h-12 w-12 bg-black/90 text-white rounded-full hover:bg-black border-white/20 z-10"
             onClick={closeImageModal}
-            className="absolute top-6 right-6 w-12 h-12 bg-black bg-opacity-80 text-white rounded-full hover:bg-opacity-100 transition-colors z-10 flex items-center justify-center"
           >
-            ✕
-          </button>
+            <X className="h-5 w-5" />
+          </Button>
 
           {/* Image */}
           <img 
@@ -582,25 +661,32 @@ function Generate() {
 
           {/* Bottom Controls */}
           <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 z-10">
-            <button
+            <Button
+              variant="destructive"
+              size="lg"
+              className="font-semibold px-8 py-4 rounded-full min-w-[120px]"
               onClick={(e) => { e.stopPropagation(); handleReject() }}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-4 rounded-full transition-colors min-w-[120px]"
             >
-              ✗ Reject
-            </button>
+              <X className="h-4 w-4 mr-2" />
+              Reject
+            </Button>
             
-            <button
+            <Button
+              className="bg-green-600 hover:bg-green-700 font-semibold px-8 py-4 rounded-full min-w-[120px]"
+              size="lg"
               onClick={(e) => { e.stopPropagation(); handleAccept() }}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-full transition-colors min-w-[120px]"
             >
-              ✓ Accept
-            </button>
+              <Zap className="h-4 w-4 mr-2" />
+              Accept
+            </Button>
           </div>
 
           {/* Instructions */}
-          <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white text-sm px-4 py-2 rounded-full">
-            🖱️ Drag to pan • 🖲️ Scroll to zoom • Accept/Reject auto-advances
-          </div>
+          <Card className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black/90 border-white/20">
+            <CardContent className="text-white text-sm px-4 py-2">
+              🖱️ Drag to pan • 🖲️ Scroll to zoom • Accept/Reject auto-advances
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

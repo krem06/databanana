@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { CheckCircle, XCircle, ChevronDown, ChevronRight, FolderOpen, Package } from 'lucide-react'
 
 function ImageValidationGallery({ 
   datasets = [], 
@@ -144,14 +148,14 @@ function ImageValidationGallery({
 
   if (datasets.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400">No images available for validation.</p>
-      </div>
+      <Card className="text-center py-12">
+        <CardContent className="flex flex-col items-center">
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+            <FolderOpen className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground">No images available for validation.</p>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -164,120 +168,124 @@ function ImageValidationGallery({
         const totalCost = dataset.batches.reduce((sum, batch) => sum + batch.cost, 0)
         
         return (
-          <div key={dataset.id} className="border border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden">
+          <Card key={dataset.id} className="overflow-hidden">
             {/* Dataset Header */}
             {showDatasetHeaders && (
-              <div 
-                className="bg-blue-50 dark:bg-blue-900/20 px-6 py-5 border-b border-gray-300 dark:border-gray-600 cursor-pointer"
+              <CardHeader 
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => toggleDataset(dataset.id)}
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      📁 {dataset.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                      Created {formatDate(dataset.created_at)} • {dataset.batches.length} batches
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <CardTitle className="text-lg">{dataset.name}</CardTitle>
+                      <CardDescription>
+                        Created {formatDate(dataset.created_at)} • {dataset.batches.length} batches
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-6 text-sm">
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                      ✓{totalCounts.selected} selected
-                    </span>
-                    <span className="text-red-500 dark:text-red-400 font-medium">
-                      ✗{totalCounts.rejected} rejected
-                    </span>
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {allImages.length} total images
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-white">
+                  <div className="flex items-center gap-4">
+                    <Badge variant="default" className="bg-green-500 hover:bg-green-500/80 text-white">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      {totalCounts.selected}
+                    </Badge>
+                    <Badge variant="destructive">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      {totalCounts.rejected}
+                    </Badge>
+                    <Badge variant="outline">
+                      {allImages.length} total
+                    </Badge>
+                    <Badge variant="default">
                       ${totalCost.toFixed(2)}
-                    </span>
+                    </Badge>
                     {onSaveDataset && (
-                      <button
+                      <Button
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
                           onSaveDataset(dataset)
                         }}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
                       >
                         Save
-                      </button>
+                      </Button>
                     )}
-                    <span className="text-gray-400">
-                      {isExpanded ? '▼' : '▶'}
-                    </span>
+                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </div>
                 </div>
-              </div>
+              </CardHeader>
             )}
 
             {/* Batches */}
-            <div className={`space-y-0 ${showDatasetHeaders && !isExpanded ? 'hidden' : ''}`}>
+            <CardContent className={`p-0 space-y-0 ${showDatasetHeaders && !isExpanded ? 'hidden' : ''}`}>
               {dataset.batches.map((batch, batchIndex) => {
                 const isBatchExpanded = expandedBatches.has(batch.id)
                 const batchCounts = getImageCounts(batch.images)
                 
                 return (
-                  <div key={batch.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                  <Card key={batch.id} className="border-0 rounded-none border-b last:border-b-0">
                     {/* Batch Header */}
-                    <div 
-                      className={`px-6 py-4 cursor-pointer transition-colors ${
+                    <CardHeader 
+                      className={`cursor-pointer transition-colors hover:bg-muted/50 ${
                         isBatchExpanded 
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800' 
-                          : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? 'bg-muted border-b' 
+                          : 'bg-background'
                       }`}
                       onClick={() => toggleBatch(batch.id)}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium text-gray-900 dark:text-white">
-                            📦 Batch {batchIndex + 1}: {batch.context}
-                          </h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            Generated {formatDate(batch.timestamp)}
-                            {batch.excludeTags && (
-                              <span className="ml-2">• Excluded: {batch.excludeTags}</span>
-                            )}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <CardTitle className="text-base">
+                              Batch {batchIndex + 1}: {batch.context}
+                            </CardTitle>
+                            <CardDescription>
+                              Generated {formatDate(batch.timestamp)}
+                              {batch.excludeTags && (
+                                <span className="ml-2">• Excluded: {batch.excludeTags}</span>
+                              )}
+                            </CardDescription>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-green-600 dark:text-green-400 font-medium">
-                            ✓{batchCounts.selected} selected
-                          </span>
-                          <span className="text-red-500 dark:text-red-400 font-medium">
-                            ✗{batchCounts.rejected} rejected
-                          </span>
-                          <span className="text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-4">
+                          <Badge variant="default" className="bg-green-500 hover:bg-green-500/80 text-white">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            {batchCounts.selected}
+                          </Badge>
+                          <Badge variant="destructive">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            {batchCounts.rejected}
+                          </Badge>
+                          <Badge variant="outline">
                             {batch.images.length} total
-                          </span>
-                          <span className="font-medium text-gray-900 dark:text-white">
+                          </Badge>
+                          <Badge variant="default">
                             ${batch.cost.toFixed(2)}
-                          </span>
-                          <span className="text-gray-400">
-                            {isBatchExpanded ? '▼' : '▶'}
-                          </span>
+                          </Badge>
+                          {isBatchExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </div>
                       </div>
-                    </div>
+                    </CardHeader>
 
                     {/* Images Grid */}
                     {isBatchExpanded && (
-                      <div className="p-6">
+                      <CardContent className="p-6">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                           {batch.images.map((image) => {
                             const isSelected = selectedImages.has(image.id)
                             const isRejected = rejectedImages.has(image.id)
                             
                             return (
-                              <div 
+                              <Card 
                                 key={image.id}
-                                className={`relative rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-105 ${
+                                className={`relative overflow-hidden cursor-pointer transition-all hover:scale-105 hover:shadow-md ${
                                   isSelected 
                                     ? 'ring-2 ring-green-500' 
                                     : isRejected
                                     ? 'ring-2 ring-red-500 opacity-60'
-                                    : 'hover:ring-2 hover:ring-blue-300'
+                                    : 'hover:ring-2 hover:ring-primary/20'
                                 }`}
                                 onClick={(e) => handleImageClick(image.id, e, image)}
                                 title={onImageClick ? "Click to view" : "Click to select • Shift+Click to reject"}
@@ -291,33 +299,34 @@ function ImageValidationGallery({
                                 {/* Selection/Rejection badge */}
                                 {(isSelected || isRejected) && (
                                   <div className="absolute top-2 right-2">
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                      isSelected ? 'bg-green-500' : 'bg-red-500'
-                                    }`}>
-                                      {isSelected ? '✓' : '✗'}
-                                    </div>
+                                    <Badge 
+                                      variant={isSelected ? "default" : "destructive"} 
+                                      className="w-6 h-6 p-0 flex items-center justify-center rounded-full"
+                                    >
+                                      {isSelected ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                                    </Badge>
                                   </div>
                                 )}
                                 
                                 {/* Hover overlay */}
-                                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all duration-200 flex items-center justify-center">
                                   <div className="opacity-0 hover:opacity-100 transition-opacity duration-200">
-                                    <div className="bg-white bg-opacity-90 rounded-full p-1 text-gray-700 text-xs">
+                                    <Badge variant="secondary" className="text-xs">
                                       {isSelected ? 'Selected' : isRejected ? 'Rejected' : 'Click to select'}
-                                    </div>
+                                    </Badge>
                                   </div>
                                 </div>
-                              </div>
+                              </Card>
                             )
                           })}
                         </div>
-                      </div>
+                      </CardContent>
                     )}
-                  </div>
+                  </Card>
                 )
               })}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )
       })}
     </div>

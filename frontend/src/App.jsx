@@ -12,6 +12,9 @@ import Generate from './pages/Generate'
 import Account from './pages/Account'
 import { apiClient } from './api'
 import { useOffline } from './hooks/useOffline'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Database, Images, Zap, User } from 'lucide-react'
 
 function Navigation() {
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -49,45 +52,91 @@ function Navigation() {
 
   return (
     <>
-      <nav className="nav-light border-b px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
+      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-16 items-center justify-between px-6 max-w-7xl mx-auto">
+          {/* Logo */}
           <div className="flex items-center gap-3">
-            <img src="/src/assets/databanana-top.jpg" alt="Data Banana" className="w-8 h-8 rounded" />
-            <span className="text-xl font-semibold text-manual">databanana.ai</span>
+            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg">
+              <Database className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+              Data Banana
+            </span>
           </div>
-          <div className="flex items-center gap-6">
-            <Link to="/" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Home</Link>
-            <Link to="/gallery" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/gallery') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Gallery</Link>
+
+          {/* Navigation Links */}
+          <div className="flex items-center gap-1">
+            <Button 
+              variant={isActive('/') ? 'default' : 'ghost'} 
+              size="sm" 
+              asChild
+            >
+              <Link to="/" className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Home
+              </Link>
+            </Button>
+            
+            <Button 
+              variant={isActive('/gallery') ? 'default' : 'ghost'} 
+              size="sm" 
+              asChild
+            >
+              <Link to="/gallery" className="flex items-center gap-2">
+                <Images className="h-4 w-4" />
+                Gallery
+              </Link>
+            </Button>
+
             {isAuthenticated && (
               <>
-                <Link to="/generate" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/generate') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Generate</Link>
-                <Link to="/account" className={`text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${isActive('/account') ? 'text-blue-600 dark:text-blue-400' : ''}`}>Account</Link>
+                <Button 
+                  variant={isActive('/generate') ? 'default' : 'ghost'} 
+                  size="sm" 
+                  asChild
+                >
+                  <Link to="/generate" className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Generate
+                  </Link>
+                </Button>
+                
+                <Button 
+                  variant={isActive('/account') ? 'default' : 'ghost'} 
+                  size="sm" 
+                  asChild
+                >
+                  <Link to="/account" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Account
+                  </Link>
+                </Button>
               </>
             )}
-            
+          </div>
+
+          {/* Right Side */}
+          <div className="flex items-center gap-3">
             <ThemeToggle />
             
-            <div className="flex items-center gap-3">
-              {isOffline && (
-                <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
-                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                  Offline
-                </div>
-              )}
-              {isAuthenticated ? (
-                <div className="text-sm text-gray-600 dark:text-gray-300">
-                  Credits: <span className="font-medium text-green-600 dark:text-green-400">${credits}</span>
-                </div>
-              ) : (
-                <button className="btn-primary" onClick={() => setShowAuthModal(true)}>
-                  Login
-                </button>
-              )}
-            </div>
+            {isOffline && (
+              <Badge variant="destructive" className="text-xs">
+                Offline
+              </Badge>
+            )}
+            
+            {isAuthenticated ? (
+              <Badge variant="secondary">
+                ${credits}
+              </Badge>
+            ) : (
+              <Button onClick={() => setShowAuthModal(true)} size="sm">
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </nav>
-
 
       <AuthModal 
         isOpen={showAuthModal} 
@@ -102,17 +151,17 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-gray-600">Loading...</div>
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="text-lg text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
-      <main className="">
+      <main>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
