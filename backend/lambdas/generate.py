@@ -4,6 +4,18 @@ import time
 import boto3
 from db_utils import get_cognito_user_id, get_db, get_user_db_id, get_cognito_email
 
+def cors_response(status_code, body):
+    """Helper function to create response with CORS headers"""
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+            'Access-Control-Allow-Methods': 'POST,OPTIONS'
+        },
+        'body': json.dumps(body)
+    }
+
 def handler(event, context):
     """
     Main handler: Start Step Functions workflow for image generation
@@ -20,7 +32,7 @@ def handler(event, context):
         # Basic validation
         if not isinstance(image_count, int) or image_count < 10 or image_count > 100:
             print(f'❌ VALIDATION ERROR: Invalid image count {image_count}')
-            return {'statusCode': 400, 'body': json.dumps({'error': 'Image count must be between 10 and 100'})}
+            return cors_response(400, {'error': 'Image count must be between 10 and 100'})
         
         # Calculate cost and check user credits before starting workflow
         cost = image_count * 0.05
@@ -37,18 +49,18 @@ def handler(event, context):
         
         if not user_result:
             print(f'❌ USER ERROR: User not found in database db_id={user_db_id}')
-            return {'statusCode': 404, 'body': json.dumps({'error': 'User not found'})}
+            return cors_response(404, {'error': 'User not found'})
             
         user_credits = user_result[0]
         print(f'💳 CREDITS: user has ${user_credits:.2f}, needs ${cost:.2f}')
         
         if user_credits < cost:
             print(f'❌ INSUFFICIENT CREDITS: need ${cost:.2f} but have ${user_credits:.2f}')
-            return {'statusCode': 402, 'body': json.dumps({
+            return cors_response(402, {
                 'error': f'Insufficient credits. Need ${cost:.2f} but you have ${user_credits:.2f}',
                 'required': cost,
                 'available': float(user_credits)
-            })}
+            })
         
         # Start Step Functions workflow
         stepfunctions = boto3.client('stepfunctions')
@@ -74,14 +86,14 @@ def handler(event, context):
         
         print(f'✅ STEP FUNCTIONS STARTED: execution_id={execution_name}')
         
-        return {'statusCode': 202, 'body': json.dumps({
+        return cors_response(202, {
             'execution_id': execution_name,
             'status': 'processing',
             'message': f'Image generation started. Check status at /status/{execution_name}',
             'estimated_cost': cost
-        })}
+        })
         
     except Exception as e:
         print(f'❌ GENERATE ERROR: {str(e)} | user={cognito_user_id} images={image_count}')
-        return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
+        return cors_response(500, {'error': str(e)})
 

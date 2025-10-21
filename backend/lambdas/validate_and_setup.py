@@ -50,9 +50,9 @@ def handler(event, context):
         cur.execute('UPDATE users SET credits = credits - %s WHERE id = %s', (cost, user_db_id))
         
         # Create batch record with processing status
-        cur.execute('''INSERT INTO batches (user_id, context, status, cost, current_step, progress, created_at, updated_at) 
-                       VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
-                    (user_db_id, context_text, 'processing', cost, 'ValidateAndSetup', 10))
+        cur.execute('''INSERT INTO batches (user_id, context, exclude_tags, image_count, cost, status, current_step, progress, created_at, updated_at) 
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
+                    (user_db_id, context_text, exclude_tags, image_count, cost, 'processing', 'ValidateAndSetup', 10))
         batch_id = cur.fetchone()[0]
         
         conn.commit()

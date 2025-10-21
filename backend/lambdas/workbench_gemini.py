@@ -66,7 +66,7 @@ def lambda_handler(event, context):
             })
         
         batch_job = gemini_client.batches.create(
-            model="models/gemini-2.5-flash-image-preview",
+            model="models/gemini-2.5-flash-image",
             src=inline_requests,
             config={'display_name': f"workbench-{int(time.time())}"}
         )
