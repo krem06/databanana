@@ -3,16 +3,13 @@ import os
 import time
 import boto3
 from db_utils import get_cognito_user_id, get_db, get_user_db_id, get_cognito_email
+from cors_utils import get_cors_headers
 
 def cors_response(status_code, body):
     """Helper function to create response with CORS headers"""
     return {
         'statusCode': status_code,
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
+        'headers': get_cors_headers(),
         'body': json.dumps(body)
     }
 

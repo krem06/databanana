@@ -1,5 +1,6 @@
 import json
 from db_utils import get_db, get_cognito_user_id
+from cors_utils import get_cors_headers
 
 def handler(event, context):
     try:
@@ -15,7 +16,11 @@ def handler(event, context):
             return update_image(cognito_user_id, event)
             
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)}),
+            'headers': get_cors_headers()
+        }
 
 def get_images(event):
     conn = get_db()
@@ -50,7 +55,11 @@ def get_images(event):
         for row in cur.fetchall()
     ]
     
-    return {'statusCode': 200, 'body': json.dumps({'images': images})}
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'images': images}),
+        'headers': get_cors_headers()
+    }
 
 def create_images(cognito_user_id, event):
     """Save generated images to database"""
@@ -79,7 +88,11 @@ def create_images(cognito_user_id, event):
             ))
         
         conn.commit()
-        return {'statusCode': 201, 'body': json.dumps({'success': True})}
+        return {
+            'statusCode': 201,
+            'body': json.dumps({'success': True}),
+            'headers': get_cors_headers()
+        }
         
     except Exception as e:
         conn.rollback()
@@ -99,7 +112,11 @@ def update_image(cognito_user_id, event):
                    WHERE i.id = %s AND u.cognito_id = %s''', (image_id, cognito_user_id))
     
     if not cur.fetchone():
-        return {'statusCode': 403, 'body': json.dumps({'error': 'Not authorized'})}
+        return {
+            'statusCode': 403,
+            'body': json.dumps({'error': 'Not authorized'}),
+            'headers': get_cors_headers()
+        }
     
     # Build update query dynamically
     updates = []
@@ -121,5 +138,9 @@ def update_image(cognito_user_id, event):
         params.append(image_id)
         cur.execute(f'UPDATE images SET {", ".join(updates)} WHERE id = %s', params)
         conn.commit()
-    
-    return {'statusCode': 200, 'body': json.dumps({'success': True})}
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'success': True}),
+        'headers': get_cors_headers()
+    }

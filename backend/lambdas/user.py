@@ -1,5 +1,6 @@
 import json
 from db_utils import get_db, get_cognito_user_id, get_cognito_email, get_user_db_id
+from cors_utils import get_cors_headers
 
 def handler(event, context):
     print(f"User function called with method: {event.get('httpMethod')}")
@@ -24,13 +25,9 @@ def handler(event, context):
     except Exception as e:
         print(f"Error in user handler: {e}")
         return {
-            'statusCode': 500, 
+            'statusCode': 500,
             'body': json.dumps({'error': str(e)}),
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-                'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-            }
+            'headers': get_cors_headers()
         }
 
 def get_user(cognito_user_id, event):
@@ -59,11 +56,7 @@ def get_user(cognito_user_id, event):
             'email': user[0] or '',
             'credits': float(user[1])
         }),
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-        }
+        'headers': get_cors_headers()
     }
 
 def update_credits(cognito_user_id, event):
@@ -79,11 +72,7 @@ def update_credits(cognito_user_id, event):
     conn.commit()
     
     return {
-        'statusCode': 200, 
+        'statusCode': 200,
         'body': json.dumps({'credits': float(new_credits)}),
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-        }
+        'headers': get_cors_headers()
     }

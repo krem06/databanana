@@ -2,6 +2,7 @@ import json
 import os
 import boto3
 from datetime import datetime, timedelta
+from cors_utils import get_cors_headers
 
 def handler(event, context):
     """

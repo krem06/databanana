@@ -2,6 +2,7 @@ import json
 import os
 import stripe
 from db_utils import get_cognito_user_id
+from cors_utils import get_cors_headers
 
 # Use test or live Stripe key based on TEST_MODE
 test_mode = os.environ.get('TEST_MODE', 'false').lower() == 'true'
@@ -39,25 +40,17 @@ def handler(event, context):
         )
         
         return {
-            'statusCode': 200, 
+            'statusCode': 200,
             'body': json.dumps({
                 'sessionId': session.id,
                 'checkout_url': session.url
             }),
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-                'Access-Control-Allow-Methods': 'POST,OPTIONS'
-            }
+            'headers': get_cors_headers()
         }
         
     except Exception as e:
         return {
-            'statusCode': 500, 
+            'statusCode': 500,
             'body': json.dumps({'error': str(e)}),
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-                'Access-Control-Allow-Methods': 'POST,OPTIONS'
-            }
+            'headers': get_cors_headers()
         }

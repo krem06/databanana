@@ -1,5 +1,6 @@
 import json
 from db_utils import get_db, get_cognito_user_id, get_user_db_id
+from cors_utils import get_cors_headers
 
 def handler(event, context):
     try:
@@ -12,7 +13,11 @@ def handler(event, context):
             return create_batch(cognito_user_id, event)
             
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)}),
+            'headers': get_cors_headers()
+        }
 
 def get_datasets_with_batches(cognito_user_id):
     user_db_id = get_user_db_id(cognito_user_id)
@@ -74,7 +79,11 @@ def get_datasets_with_batches(cognito_user_id):
             'batches': list(dataset['batches'].values())
         })
     
-    return {'statusCode': 200, 'body': json.dumps(result)}
+    return {
+        'statusCode': 200,
+        'body': json.dumps(result),
+        'headers': get_cors_headers()
+    }
 
 def create_batch(cognito_user_id, event):
     body = json.loads(event['body'])
@@ -102,7 +111,11 @@ def create_batch(cognito_user_id, event):
         batch_id = cur.fetchone()[0]
         
         conn.commit()
-        return {'statusCode': 201, 'body': json.dumps({'batch_id': batch_id, 'dataset_id': dataset_id})}
+        return {
+            'statusCode': 201,
+            'body': json.dumps({'batch_id': batch_id, 'dataset_id': dataset_id}),
+            'headers': get_cors_headers()
+        }
         
     except Exception as e:
         conn.rollback()

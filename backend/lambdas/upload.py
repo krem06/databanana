@@ -2,6 +2,7 @@ import json
 import os
 import boto3
 from uuid import uuid4
+from cors_utils import get_cors_headers
 
 s3 = boto3.client('s3')
 
@@ -25,11 +26,19 @@ def handler(event, context):
             ExpiresIn=3600
         )
         
-        return {'statusCode': 200, 'body': json.dumps({
-            'upload_url': url,
-            'key': key
-        })}
-        
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'upload_url': url,
+                'key': key
+            }),
+            'headers': get_cors_headers()
+        }
+
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)}),
+            'headers': get_cors_headers()
+        }
 

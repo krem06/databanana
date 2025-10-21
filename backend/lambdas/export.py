@@ -7,6 +7,7 @@ from datetime import datetime
 from uuid import uuid4
 import requests
 from db_utils import get_db, get_cognito_user_id, get_user_db_id
+from cors_utils import get_cors_headers
 
 s3 = boto3.client('s3')
 
@@ -20,19 +21,31 @@ def handler(event, context):
         selected_images = get_selected_images(cognito_user_id)
         
         if not selected_images:
-            return {'statusCode': 400, 'body': json.dumps({'error': 'No selected images found'})}
-        
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'No selected images found'}),
+                'headers': get_cors_headers()
+            }
+
         # Create export zip file
         export_url = create_export_zip(selected_images, export_format, cognito_user_id)
-        
-        return {'statusCode': 200, 'body': json.dumps({
-            'export_url': export_url,
-            'format': export_format,
-            'image_count': len(selected_images)
-        })}
-        
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'export_url': export_url,
+                'format': export_format,
+                'image_count': len(selected_images)
+            }),
+            'headers': get_cors_headers()
+        }
+
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)}),
+            'headers': get_cors_headers()
+        }
 
 def get_selected_images(cognito_user_id):
     user_db_id = get_user_db_id(cognito_user_id)
