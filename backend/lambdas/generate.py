@@ -17,6 +17,10 @@ def handler(event, context):
     """
     Main handler: Start Step Functions workflow for image generation
     """
+    # Handle CORS preflight requests
+    if event.get('httpMethod') == 'OPTIONS':
+        return cors_response(200, {})
+    
     try:
         print(f'Event: {event}')
         body = event['body'] if isinstance(event['body'], dict) else json.loads(event['body'])

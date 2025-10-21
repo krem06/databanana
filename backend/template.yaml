@@ -180,6 +180,11 @@ Resources:
             Method: post
             Auth:
               Authorizer: CognitoAuthorizer
+        GenerateOptions:
+          Type: Api
+          Properties:
+            Path: /generate
+            Method: options
 
 
   # Step Functions Lambda functions

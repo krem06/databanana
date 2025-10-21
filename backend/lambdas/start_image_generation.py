@@ -36,7 +36,7 @@ def handler(event, context):
         
         # Create batch job
         batch_job = gemini_client.batches.create(
-            model="models/gemini-2.5-flash-image",
+            model="gemini-2.5-flash-image",
             src=inline_requests,
             config={
                 'display_name': f"image-generation-{cognito_user_id}-{batch_id}",
