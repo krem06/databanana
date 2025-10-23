@@ -532,7 +532,7 @@ function Generate() {
 
       {/* Export Summary - Fixed positioned like Gallery */}
       {batches.length > 0 && validationState.selectedImages.size > 0 && (
-        <Card className="fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-2xl border shadow-lg bg-background">
+        <Card className="export-bar fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-2xl border shadow-xl bg-white dark:bg-gray-900 z-40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
