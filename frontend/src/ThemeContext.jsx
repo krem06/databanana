@@ -1,33 +1,17 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { ThemeProvider as NextThemesProvider } from 'next-themes'
 
-const ThemeContext = createContext()
-
-export function ThemeProvider({ children }) {
-  // Start with light mode only - we'll add dark mode later
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    // Force light mode for now
-    document.documentElement.classList.remove('dark')
-    localStorage.setItem('theme', 'light')
-  }, [])
-
-  const toggleTheme = () => {
-    // Disabled for now - focus on light mode first
-    console.log('Dark mode will be enabled after light mode is perfected')
-  }
-
+export function ThemeProvider({ children, ...props }) {
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      {...props}
+    >
       {children}
-    </ThemeContext.Provider>
+    </NextThemesProvider>
   )
 }
 
-export function useTheme() {
-  const context = useContext(ThemeContext)
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider')
-  }
-  return context
-}
+export { useTheme } from 'next-themes'

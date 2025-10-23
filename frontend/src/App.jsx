@@ -52,12 +52,12 @@ function Navigation() {
 
   return (
     <>
-      <nav className="border-b bg-background">
+      <nav className="border-b bg-card backdrop-blur-sm">
         <div className="flex h-16 items-center justify-between px-6 max-w-7xl mx-auto">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
-              <Database className="h-4 w-4 text-primary-foreground" />
+            <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-lg shadow-sm">
+              <Database className="h-4 w-4" />
             </div>
             <span className="text-xl font-bold text-foreground">
               Data Banana
@@ -70,6 +70,7 @@ function Navigation() {
               variant={isActive('/') ? 'default' : 'ghost'} 
               size="sm" 
               asChild
+className={isActive('/') ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
             >
               <Link to="/" className="flex items-center gap-2">
                 <Database className="h-4 w-4" />
@@ -81,6 +82,7 @@ function Navigation() {
               variant={isActive('/gallery') ? 'default' : 'ghost'} 
               size="sm" 
               asChild
+className={isActive('/gallery') ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
             >
               <Link to="/gallery" className="flex items-center gap-2">
                 <Images className="h-4 w-4" />
@@ -94,6 +96,7 @@ function Navigation() {
                   variant={isActive('/generate') ? 'default' : 'ghost'} 
                   size="sm" 
                   asChild
+className={isActive('/generate') ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
                 >
                   <Link to="/generate" className="flex items-center gap-2">
                     <Zap className="h-4 w-4" />
@@ -105,6 +108,7 @@ function Navigation() {
                   variant={isActive('/account') ? 'default' : 'ghost'} 
                   size="sm" 
                   asChild
+className={isActive('/account') ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
                 >
                   <Link to="/account" className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -126,7 +130,7 @@ function Navigation() {
             )}
             
             {isAuthenticated ? (
-              <Badge variant="secondary">
+              <Badge className="bg-primary/10 text-primary border-primary/20">
                 ${credits}
               </Badge>
             ) : (
@@ -161,7 +165,7 @@ function AppContent() {
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
-      <main>
+      <main className="bg-muted min-h-[calc(100vh-4rem)]">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} />
