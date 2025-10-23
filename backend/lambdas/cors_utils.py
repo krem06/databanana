@@ -15,5 +15,6 @@ def get_cors_headers():
     return {
         'Access-Control-Allow-Origin': allowed_origin,
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS'
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+        'Content-Type': 'application/json'
     }

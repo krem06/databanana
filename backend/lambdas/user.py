@@ -53,20 +53,36 @@ def get_user(cognito_user_id, event):
         cur = conn.cursor()
         cur.execute('SELECT email, credits FROM users WHERE id = %s', (user_db_id,))
         user = cur.fetchone()
+        cur.close()
+        conn.close()
         print(f"User data from DB: {user}")
-    except Exception as e:
-        print(f"Error getting user: {e}")
-        raise
-    
-    return {
-        'statusCode': 200,
-        'body': json.dumps({
+        
+        response_data = {
             'id': user_db_id,
             'email': user[0] or '',
             'credits': float(user[1])
-        }),
-        'headers': get_cors_headers()
-    }
+        }
+        print(f"Returning response dataaa: {response_data}")
+        
+        response_body = json.dumps(response_data)
+        print(f"JSON response body: {response_body}")
+        
+        final_response = {
+            'statusCode': 200,
+            'body': response_body,
+            'headers': get_cors_headers()
+        }
+        print(f"Final Lambda response: {final_response}")
+        
+        return final_response
+        
+    except Exception as e:
+        print(f"Error getting user: {e}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)}),
+            'headers': get_cors_headers()
+        }
 
 def update_credits(cognito_user_id, event):
     body = json.loads(event['body'])
