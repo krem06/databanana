@@ -10,6 +10,15 @@ stripe.api_key = os.environ.get('STRIPE_SECRET_TEST') if test_mode else os.envir
 
 def handler(event, context):
     print(f"Payment function called")
+    
+    # Handle OPTIONS preflight requests
+    if event['httpMethod'] == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': get_cors_headers(),
+            'body': ''
+        }
+    
     try:
         print(f"Parsing request body")
         body = json.loads(event['body'])

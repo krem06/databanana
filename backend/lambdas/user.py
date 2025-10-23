@@ -6,6 +6,17 @@ def handler(event, context):
     print(f"User function called with method: {event.get('httpMethod')}")
     print(f"Event: {json.dumps(event)}")
     
+    method = event['httpMethod']
+    
+    # Handle OPTIONS preflight requests without auth
+    if method == 'OPTIONS':
+        print("Handling OPTIONS preflight request")
+        return {
+            'statusCode': 200,
+            'headers': get_cors_headers(),
+            'body': ''
+        }
+    
     try:
         cognito_user_id = get_cognito_user_id(event)
         print(f"Cognito User ID: {cognito_user_id}")
@@ -13,8 +24,6 @@ def handler(event, context):
         # Debug: Print all available claims
         claims = event['requestContext']['authorizer']['claims']
         print(f"All Cognito claims: {claims}")
-        
-        method = event['httpMethod']
         
         if method == 'GET':
             print("Handling GET request for user data")

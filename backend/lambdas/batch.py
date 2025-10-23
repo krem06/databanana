@@ -3,9 +3,18 @@ from db_utils import get_db, get_cognito_user_id, get_user_db_id
 from cors_utils import get_cors_headers
 
 def handler(event, context):
+    method = event['httpMethod']
+    
+    # Handle OPTIONS preflight requests
+    if method == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': get_cors_headers(),
+            'body': ''
+        }
+    
     try:
         cognito_user_id = get_cognito_user_id(event)
-        method = event['httpMethod']
         
         if method == 'GET':
             return get_datasets_with_batches(cognito_user_id)

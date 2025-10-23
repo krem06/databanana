@@ -116,6 +116,11 @@ Resources:
             Method: post
             Auth:
               Authorizer: CognitoAuthorizer
+        UserOptions:
+          Type: Api
+          Properties:
+            Path: /user
+            Method: options
 
   BatchFunction:
     Type: AWS::Serverless::Function
@@ -137,6 +142,11 @@ Resources:
             Method: post
             Auth:
               Authorizer: CognitoAuthorizer
+        BatchesOptions:
+          Type: Api
+          Properties:
+            Path: /batches
+            Method: options
 
   ImageFunction:
     Type: AWS::Serverless::Function
@@ -368,6 +378,11 @@ Resources:
             Method: post
             Auth:
               Authorizer: CognitoAuthorizer
+        PaymentOptions:
+          Type: Api
+          Properties:
+            Path: /payment
+            Method: options
 
   UploadFunction:
     Type: AWS::Serverless::Function
