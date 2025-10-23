@@ -6,6 +6,8 @@ import { useSync } from '../hooks/useSync'
 import { offlineStorage } from '../utils/offlineStorage'
 import { useOffline } from '../hooks/useOffline'
 import ImageValidationGallery from '../components/ImageValidationGallery'
+import PageContainer from '../components/PageContainer'
+import PageHeader from '../components/PageHeader'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { User, Mail, Lock, CreditCard, Download, History, LogOut, Shield, CheckCircle, AlertCircle, Loader2, Plus, Database, Wallet } from 'lucide-react'
+import { User, Mail, Lock, CreditCard, Download, History, LogOut, Shield, CheckCircle, AlertCircle, Loader2, Database, Wallet, Plus } from 'lucide-react'
 
 function Account() {
   const [credits, setCredits] = useState(0)
@@ -168,13 +170,12 @@ function Account() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <PageContainer maxWidth="7xl">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-              <User className="h-6 w-6 text-white" />
+            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
+              <User className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-3xl font-bold">Account Settings</h1>
@@ -188,8 +189,8 @@ function Account() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <div>
                   <CardTitle>Account Details</CardTitle>
@@ -273,8 +274,8 @@ function Account() {
                 {passwordMessage && (
                   <Alert variant={passwordMessage.includes('successfully') ? 'default' : 'destructive'}>
                     {passwordMessage.includes('successfully') ? 
-                      <CheckCircle className="h-4 w-4 text-green-600" /> : 
-                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <CheckCircle className="h-4 w-4 text-primary" /> : 
+                      <AlertCircle className="h-4 w-4 text-destructive" />
                     }
                     <AlertDescription>
                       {passwordMessage}
@@ -320,8 +321,8 @@ function Account() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                  <Wallet className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <Wallet className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <div>
                   <CardTitle>Credits & Billing</CardTitle>
@@ -330,8 +331,8 @@ function Account() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                <div className="text-3xl font-bold text-green-600 mb-2">
+              <div className="text-center p-6 bg-muted rounded-xl">
+                <div className="text-3xl font-bold text-primary mb-2">
                   ${credits.toFixed(2)}
                 </div>
                 <p className="text-muted-foreground">Current Balance</p>
@@ -343,8 +344,8 @@ function Account() {
               {paymentMessage && (
                 <Alert variant={paymentMessage.includes('successful') ? 'default' : 'destructive'}>
                   {paymentMessage.includes('successful') ? 
-                    <CheckCircle className="h-4 w-4 text-green-600" /> : 
-                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <CheckCircle className="h-4 w-4 text-primary" /> : 
+                    <AlertCircle className="h-4 w-4 text-destructive" />
                   }
                   <AlertDescription>
                     {paymentMessage}
@@ -413,8 +414,8 @@ function Account() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Download className="h-4 w-4 text-white" />
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <Download className="h-4 w-4 text-primary-foreground" />
               </div>
               <div>
                 <CardTitle>Export Datasets</CardTitle>
@@ -443,8 +444,8 @@ function Account() {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                              <Database className="h-5 w-5 text-white" />
+                            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                              <Database className="h-5 w-5 text-primary-foreground" />
                             </div>
                             <div>
                               <h3 className="font-semibold">{dataset.name}</h3>
@@ -549,8 +550,8 @@ function Account() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <History className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <History className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <div>
                   <CardTitle>Generation History</CardTitle>
@@ -572,8 +573,7 @@ function Account() {
             />
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </PageContainer>
   )
 }
 

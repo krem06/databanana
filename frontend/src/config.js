@@ -13,5 +13,8 @@ export const awsConfig = {
         region: 'eu-west-1'
       }
     }
-  }
+  },
+  ssr: false
 }
+
+export const apiName = 'databanana'

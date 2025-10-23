@@ -186,7 +186,7 @@ function ImageValidationGallery({
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant="default" className="bg-green-500 hover:bg-green-500/80 text-white">
+                    <Badge variant="default" className="bg-primary hover:bg-primary/80 text-primary-foreground">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       {totalCounts.selected}
                     </Badge>
@@ -250,7 +250,7 @@ function ImageValidationGallery({
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <Badge variant="default" className="bg-green-500 hover:bg-green-500/80 text-white">
+                          <Badge variant="default" className="bg-primary hover:bg-primary/80 text-primary-foreground">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             {batchCounts.selected}
                           </Badge>
@@ -282,9 +282,9 @@ function ImageValidationGallery({
                                 key={image.id}
                                 className={`relative overflow-hidden cursor-pointer transition-all hover:scale-105 hover:shadow-md ${
                                   isSelected 
-                                    ? 'ring-2 ring-green-500' 
+                                    ? 'ring-2 ring-primary' 
                                     : isRejected
-                                    ? 'ring-2 ring-red-500 opacity-60'
+                                    ? 'ring-2 ring-destructive opacity-60'
                                     : 'hover:ring-2 hover:ring-primary/20'
                                 }`}
                                 onClick={(e) => handleImageClick(image.id, e, image)}

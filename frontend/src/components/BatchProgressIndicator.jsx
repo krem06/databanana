@@ -23,18 +23,18 @@ function BatchProgressIndicator({ batchId, progress, onComplete, onError }) {
 
   const getStatusColor = () => {
     switch (status) {
-      case 'completed': return 'text-green-600'
-      case 'failed': return 'text-red-600'
-      case 'processing': return 'text-blue-600'
+      case 'completed': return 'text-primary'
+      case 'failed': return 'text-destructive'
+      case 'processing': return 'text-primary'
       default: return 'text-gray-600'
     }
   }
 
   const getProgressBarColor = () => {
     switch (status) {
-      case 'completed': return 'bg-green-500'
-      case 'failed': return 'bg-red-500'
-      case 'processing': return 'bg-blue-500'
+      case 'completed': return 'bg-primary'
+      case 'failed': return 'bg-destructive'
+      case 'processing': return 'bg-primary'
       default: return 'bg-gray-400'
     }
   }
@@ -52,11 +52,11 @@ function BatchProgressIndicator({ batchId, progress, onComplete, onError }) {
   const currentStepIndex = steps.findIndex(step => step.key === current_step)
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+    <div className="bg-muted/30 border border-muted rounded-lg p-4 mb-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${status === 'processing' ? 'bg-blue-500 animate-pulse' : status === 'completed' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <div className={`w-2 h-2 rounded-full ${status === 'processing' ? 'bg-primary animate-pulse' : status === 'completed' ? 'bg-primary' : 'bg-destructive'}`}></div>
           <span className="font-medium text-sm">
             Batch {batchId.slice(-8)} • {status === 'completed' ? 'Completed' : status === 'failed' ? 'Failed' : 'Processing'}
           </span>
@@ -100,16 +100,16 @@ function BatchProgressIndicator({ batchId, progress, onComplete, onError }) {
               return (
                 <div key={step.key} className="flex flex-col items-center gap-1">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${
-                    isFailed ? 'bg-red-500 text-white' :
-                    isActive ? 'bg-blue-500 text-white animate-pulse' :
-                    isCompleted ? 'bg-green-500 text-white' :
+                    isFailed ? 'bg-destructive text-destructive-foreground' :
+                    isActive ? 'bg-primary text-primary-foreground animate-pulse' :
+                    isCompleted ? 'bg-primary text-primary-foreground' :
                     'bg-muted text-muted-foreground'
                   }`}>
                     {isFailed ? '✗' : isCompleted ? '✓' : step.icon}
                   </div>
                   <span className={`text-xs ${
-                    isActive ? 'text-blue-600 font-medium' :
-                    isCompleted ? 'text-green-600' :
+                    isActive ? 'text-primary font-medium' :
+                    isCompleted ? 'text-primary' :
                     'text-muted-foreground'
                   }`}>
                     {step.label}

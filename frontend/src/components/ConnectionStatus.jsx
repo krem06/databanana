@@ -6,9 +6,9 @@ function ConnectionStatus({ status, className = "" }) {
     switch (status) {
       case 'connected':
         return {
-          color: 'text-green-600',
-          bgColor: 'bg-green-100',
-          borderColor: 'border-green-200',
+          color: 'text-primary',
+          bgColor: 'bg-primary/10',
+          borderColor: 'border-primary/20',
           icon: '🟢',
           text: 'Live updates active'
         }
@@ -22,9 +22,9 @@ function ConnectionStatus({ status, className = "" }) {
         }
       case 'error':
         return {
-          color: 'text-red-600',
-          bgColor: 'bg-red-100',
-          borderColor: 'border-red-200',
+          color: 'text-destructive',
+          bgColor: 'bg-destructive/10',
+          borderColor: 'border-destructive/20',
           icon: '🔴',
           text: 'Connection failed'
         }

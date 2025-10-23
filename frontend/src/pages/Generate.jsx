@@ -6,6 +6,8 @@ import { useWebSocketProgress } from '../hooks/useWebSocketProgress'
 import ImageValidationGallery from '../components/ImageValidationGallery'
 import BatchProgressIndicator from '../components/BatchProgressIndicator'
 import ConnectionStatus from '../components/ConnectionStatus'
+import PageContainer from '../components/PageContainer'
+import PageHeader from '../components/PageHeader'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
-import { Zap, Download, RefreshCw, Database, Images, Loader2, ImageIcon, X, Plus, Minus, ZoomIn, ZoomOut } from 'lucide-react'
+import { Zap, Download, RefreshCw, Database, Images, Loader2, ImageIcon, X, ZoomIn, ZoomOut } from 'lucide-react'
 
 function Generate() {
   // Form state
@@ -79,7 +81,8 @@ function Generate() {
   const fetchUserData = async () => {
     try {
       const userData = await apiClient.getUser()
-      setUserCredits(userData.credits)
+      console.log('User data:', userData)
+      setUserCredits(userData.credits || 0)
     } catch (error) {
       console.error('Failed to fetch user data:', error)
       setUserCredits(25.50) // Fallback
@@ -360,36 +363,37 @@ function Generate() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <div className="max-w-6xl mx-auto p-6">
-        {/* Generation Form */}
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center">
-                  <Zap className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Generate Dataset</CardTitle>
-                  <CardDescription>Create diverse, labeled images for ML training</CardDescription>
-                </div>
-              </div>
+    <>
+    <PageContainer>
+      <PageHeader 
+        icon={Zap}
+        badge="AI-Powered Generation"
+        title="Generate Dataset"
+        description="Create diverse, labeled images for ML training"
+      />
+
+      {/* Generation Form */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-xl">Generation Options</CardTitle>
+            </div>
               <div className="flex items-center gap-3">
                 {activeDatasetName && (
-                  <Badge variant="secondary" className="">
+                  <Badge variant="secondary">
                     <Database className="h-3 w-3 mr-1" />
                     {activeDatasetName}
                   </Badge>
                 )}
                 {batches.length > 0 && (
-                  <Badge variant="secondary" className="">
+                  <Badge variant="secondary">
                     ✓ Auto-saved
                   </Badge>
                 )}
                 <ConnectionStatus status={connectionStatus} />
                 <Badge variant="outline" className="font-medium">
-                  ${userCredits.toFixed(2)} credits
+                  ${(userCredits || 0).toFixed(2)} credits
                 </Badge>
               </div>
             </div>
@@ -526,83 +530,65 @@ function Generate() {
           </Card>
         )}
 
-        {/* Export Summary */}
-        {batches.length > 0 && (
-          <Card className="sticky bottom-6 border-2 border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <Images className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Total:</span>
-                    <Badge variant="outline">
-                      {batches.reduce((total, batch) => total + batch.images.length, 0)}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Selected:</span>
-                    <Badge variant="secondary" className="">
-                      {validationState.selectedImages.size}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Rejected:</span>
-                    <Badge variant="secondary" className="">
-                      {validationState.rejectedImages.size}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Export Cost:</span>
-                    <Badge variant="outline">
-                      ${(validationState.selectedImages.size * 0.10).toFixed(2)}
-                    </Badge>
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleExport} 
-                  disabled={validationState.selectedImages.size === 0}
-                  size="lg"
-                  className="font-medium"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export {validationState.selectedImages.size} Images
+      {/* Export Summary - Fixed positioned like Gallery */}
+      {batches.length > 0 && validationState.selectedImages.size > 0 && (
+        <Card className="fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-2xl border shadow-lg bg-background">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <Download className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-sm">Export Dataset</h3>
+                <p className="text-xs text-muted-foreground">
+                  {validationState.selectedImages.size} selected • ${(validationState.selectedImages.size * 0.10).toFixed(2)}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setValidationState({ selectedImages: new Set(), rejectedImages: new Set() })}>
+                  Clear
+                </Button>
+                <Button onClick={handleExport} size="sm">
+                  <Download className="h-3 w-3 mr-1" />
+                  Export
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Empty State */}
-        {batches.length === 0 && !generating && (
-          <Card className="text-center">
-            <CardContent className="p-16">
-              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-                <ImageIcon className="w-12 h-12 text-muted-foreground" />
-              </div>
-              <CardTitle className="text-xl mb-2">Ready to generate your dataset?</CardTitle>
-              <CardDescription className="max-w-md mx-auto">
-                Describe your scene above and click generate to start creating high-quality images for your training dataset.
-              </CardDescription>
-            </CardContent>
-          </Card>
-        )}
+      {/* Empty State */}
+      {batches.length === 0 && !generating && (
+        <Card className="text-center">
+          <CardContent className="p-16">
+            <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+              <ImageIcon className="w-12 h-12 text-muted-foreground" />
+            </div>
+            <CardTitle className="text-xl mb-2">Ready to generate your dataset?</CardTitle>
+            <CardDescription className="max-w-md mx-auto">
+              Describe your scene above and click generate to start creating high-quality images for your training dataset.
+            </CardDescription>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Loading State (only show if no progress data available) */}
-        {generating && progressData.size === 0 && (
-          <Card>
-            <CardContent className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <CardTitle className="text-lg">Starting generation process...</CardTitle>
-              </div>
-              <CardDescription>Connecting to real-time progress updates...</CardDescription>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Image Modal */}
-      {viewedImage && (
+      {/* Loading State (only show if no progress data available) */}
+      {generating && progressData.size === 0 && (
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <CardTitle className="text-lg">Starting generation process...</CardTitle>
+            </div>
+            <CardDescription>Connecting to real-time progress updates...</CardDescription>
+          </CardContent>
+        </Card>
+      )}
+    </PageContainer>
+    
+    {/* Image Modal */}
+    {viewedImage && (
         <div 
           className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
           onClick={closeImageModal}
@@ -672,7 +658,7 @@ function Generate() {
             </Button>
             
             <Button
-              className="bg-green-600 hover:bg-green-700 font-semibold px-8 py-4 rounded-full min-w-[120px]"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-4 rounded-full min-w-[120px]"
               size="lg"
               onClick={(e) => { e.stopPropagation(); handleAccept() }}
             >
@@ -689,7 +675,7 @@ function Generate() {
           </Card>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

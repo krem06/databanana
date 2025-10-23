@@ -13,7 +13,7 @@ function LazyImage({ src, alt, className, style }) {
       )}
       
       {error ? (
-        <div className="absolute inset-0 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
+        <div className="absolute inset-0 bg-muted rounded-lg flex items-center justify-center text-destructive">
           Failed to load
         </div>
       ) : (

@@ -76,18 +76,12 @@ export default function AuthModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95">
+      <Card className="w-full max-w-md shadow-2xl bg-background">
         <CardHeader className="text-center space-y-4 pb-4">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
-                config.color === 'blue' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
-                config.color === 'green' ? 'bg-gradient-to-br from-green-500 to-green-600' :
-                config.color === 'orange' ? 'bg-gradient-to-br from-orange-500 to-orange-600' :
-                config.color === 'purple' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
-                'bg-gradient-to-br from-red-500 to-red-600'
-              }`}>
-                <config.icon className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
+                <config.icon className="h-6 w-6 text-primary-foreground" />
               </div>
               <CardTitle className="text-2xl">{config.title}</CardTitle>
               <CardDescription className="text-base mt-2">{config.description}</CardDescription>
@@ -214,8 +208,8 @@ export default function AuthModal({ isOpen, onClose }) {
             {message && (
               <Alert variant={message.includes('Check your email') || message.includes('confirmed') || message.includes('successfully') ? 'default' : 'destructive'}>
                 {message.includes('Check your email') || message.includes('confirmed') || message.includes('successfully') ? 
-                  <CheckCircle className="h-4 w-4 text-green-600" /> : 
-                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <CheckCircle className="h-4 w-4 text-primary" /> : 
+                  <AlertCircle className="h-4 w-4 text-destructive" />
                 }
                 <AlertDescription>
                   {message}

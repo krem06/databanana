@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import LazyImage from '../components/LazyImage'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import PageContainer from '../components/PageContainer'
+import PageHeader from '../components/PageHeader'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Download, Search, Star, Eye, Images } from 'lucide-react'
-import { useState } from 'react'
 
 function Gallery() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -35,72 +37,62 @@ function Gallery() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-12 text-center">
-          <div className="flex items-center justify-center mb-6">
-            <Badge className="text-sm px-4 py-2" variant="secondary">
-              <Images className="h-4 w-4 mr-2" />
-              Community Datasets
-            </Badge>
-          </div>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Public Gallery
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Browse and download community-validated ML datasets for free
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader 
+        icon={Images}
+        badge="Community Datasets"
+        title="Public Gallery"
+        description="Browse and download community-validated ML datasets for free"
+      />
 
-        {/* Search Bar */}
-        <Card className="mb-12 border-2 border-muted">
-          <CardContent className="p-8">
-            <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-              <Input
-                placeholder="Search by prompt, tags, or concepts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 text-lg border-0 focus-visible:ring-2 focus-visible:ring-primary"
-              />
+      {/* Search Bar */}
+      <Card className="mb-8">
+        <CardContent className="p-6">
+          <div className="relative max-w-2xl mx-auto">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search by prompt, tags, or concepts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 h-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Card className="text-center">
+          <CardContent className="p-4">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-3">
+              <Images className="h-4 w-4 text-primary-foreground" />
             </div>
+            <div className="text-2xl font-bold text-primary mb-1">{filteredImages.length}</div>
+            <div className="text-sm text-muted-foreground">Available Images</div>
           </CardContent>
         </Card>
+        <Card className="text-center">
+          <CardContent className="p-4">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-3">
+              <Star className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <div className="text-2xl font-bold text-primary mb-1">{selectedImages.size}</div>
+            <div className="text-sm text-muted-foreground">Selected</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent className="p-4">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-3">
+              <Download className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <div className="text-2xl font-bold text-primary mb-1">${(selectedImages.size * 0.1).toFixed(2)}</div>
+            <div className="text-sm text-muted-foreground">Export Cost</div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card className="text-center hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-b from-blue-50 to-blue-100">
-            <CardContent className="p-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Images className="h-6 w-6 text-white" />
-              </div>
-              <div className="text-3xl font-bold text-primary mb-2">{filteredImages.length}</div>
-              <div className="text-muted-foreground">Available Images</div>
-            </CardContent>
-          </Card>
-          <Card className="text-center hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-b from-green-50 to-green-100">
-            <CardContent className="p-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Star className="h-6 w-6 text-white" />
-              </div>
-              <div className="text-3xl font-bold text-primary mb-2">{selectedImages.size}</div>
-              <div className="text-muted-foreground">Selected for Export</div>
-            </CardContent>
-          </Card>
-          <Card className="text-center hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-b from-purple-50 to-purple-100">
-            <CardContent className="p-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Download className="h-6 w-6 text-white" />
-              </div>
-              <div className="text-3xl font-bold text-primary mb-2">${(selectedImages.size * 0.1).toFixed(2)}</div>
-              <div className="text-muted-foreground">Export Cost</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Image Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
+      {/* Image Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
           {filteredImages.map((image) => (
             <Card 
               key={image.id} 
@@ -163,37 +155,34 @@ function Gallery() {
           ))}
         </div>
 
-        {/* Export Section */}
-        {selectedImages.size > 0 && (
-          <Card className="sticky bottom-6 border-2 border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-2xl">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center">
-                    <Download className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold">Export Selected Images</h3>
-                    <p className="text-muted-foreground">
-                      {selectedImages.size} images selected • ${(selectedImages.size * 0.1).toFixed(2)} total
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" size="lg" onClick={() => setSelectedImages(new Set())}>
-                    Clear Selection
-                  </Button>
-                  <Button size="lg" className="font-medium">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export with Metadata
-                  </Button>
-                </div>
+      {/* Export Section */}
+      {selectedImages.size > 0 && (
+        <Card className="fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md border shadow-lg bg-background">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <Download className="h-4 w-4 text-primary-foreground" />
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-sm">Export Selected</h3>
+                <p className="text-xs text-muted-foreground">
+                  {selectedImages.size} images • ${(selectedImages.size * 0.1).toFixed(2)}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedImages(new Set())}>
+                  Clear
+                </Button>
+                <Button size="sm">
+                  <Download className="h-3 w-3 mr-1" />
+                  Export
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </PageContainer>
   )
 }
 
