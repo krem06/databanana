@@ -74,3 +74,8 @@
 .dark .dark\:bg-gray-900 {
   background-color: #111827 !important;
 }
+
+/* Fix for passive event listener warnings */
+.cursor-pointer {
+  touch-action: manipulation;
+}
