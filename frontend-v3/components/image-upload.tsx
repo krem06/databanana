@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { Upload, X } from "lucide-react"
+import { Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ImageUploadProps {
@@ -39,7 +39,7 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0]
-        if (file.type.startsWith("image/")) {
+        if (file.type.startsWith("image/") && file.size <= 10 * 1024 * 1024) {
           onImageSelect(file)
         }
       }
@@ -51,7 +51,7 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
         const file = e.target.files[0]
-        if (file.type.startsWith("image/")) {
+        if (file.type.startsWith("image/") && file.size <= 10 * 1024 * 1024) {
           onImageSelect(file)
         }
       }

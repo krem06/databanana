@@ -15,7 +15,7 @@ import {
 import { Progress } from "@/components/ui/progress"
 import { ImageUpload } from "@/components/image-upload"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Sparkles, Trash2, User, X } from "lucide-react"
+import { Sparkles, Trash2, User, X, ImageIcon } from "lucide-react"
 import Link from "next/link"
 
 interface GeneratedImage {
@@ -115,7 +115,7 @@ export default function Home() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                Image Generator
+                Data Banana
               </h1>
               <p className="text-muted-foreground text-sm md:text-base">
                 Generate up to 100 images at a time based on a template.
@@ -124,6 +124,11 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowAuth(true)}>
                 Login
+              </Button>
+              <Button variant="outline" size="icon" asChild>
+                <Link href="/gallery">
+                  <ImageIcon className="h-4 w-4" />
+                </Link>
               </Button>
               <Button variant="outline" size="icon" asChild>
                 <Link href="/account">
@@ -206,18 +211,54 @@ export default function Home() {
               )}
             </div>
 
-            {/* Options */}
+            {/* Ownership Options */}
+            <div className="space-y-2">
+              <Label>Ownership Options</Label>
+              <div className="space-y-3">
+                <div className="p-4 border rounded-lg bg-muted/30">
+                  <label className="flex items-start space-x-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ownership"
+                      value="standard"
+                      checked={!exclusiveOwnership}
+                      onChange={() => setExclusiveOwnership(false)}
+                      className="mt-0.5 text-primary focus:ring-primary"
+                    />
+                    <div>
+                      <span className="text-sm font-medium">Standard License ($0.10 per image)</span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Images are hosted on Data Banana platform and accessible through your gallery.
+                        You're free to use them for any purpose while Data Banana retains platform rights.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+                
+                <div className="p-4 border rounded-lg bg-muted/30">
+                  <label className="flex items-start space-x-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ownership"
+                      value="exclusive"
+                      checked={exclusiveOwnership}
+                      onChange={() => setExclusiveOwnership(true)}
+                      className="mt-0.5 text-primary focus:ring-primary"
+                    />
+                    <div>
+                      <span className="text-sm font-medium">Exclusive Ownership ($0.20 per image)</span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Images are not hosted in the gallery. Download .zip available for 30 days, then all copies 
+                        are permanently removed ensuring complete privacy and exclusive ownership.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Terms Agreement */}
             <div className="space-y-3 pt-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={exclusiveOwnership}
-                  onChange={(e) => setExclusiveOwnership(e.target.checked)}
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-muted-foreground">Exclusive ownership (images will be removed from server after 30 days)</span>
-              </label>
-              
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -241,18 +282,16 @@ export default function Home() {
             {/* Pricing Summary */}
             <div className="p-3 bg-muted/50 rounded-lg">
               <div className="flex justify-between items-center text-sm">
-                <span>Images: {visualCount} × $0.05</span>
-                <span className="font-medium">${(visualCount * 0.05).toFixed(2)}</span>
+                <span>Images: {visualCount} × ${exclusiveOwnership ? '0.20' : '0.10'}</span>
+                <span className="font-medium">${(visualCount * (exclusiveOwnership ? 0.20 : 0.10)).toFixed(2)}</span>
               </div>
-              {exclusiveOwnership && (
-                <div className="flex justify-between items-center text-sm">
-                  <span>Exclusive ownership fee</span>
-                  <span className="font-medium">+$2.00</span>
-                </div>
-              )}
+              <div className="flex justify-between items-center text-sm pt-1 text-muted-foreground">
+                <span>{exclusiveOwnership ? 'Exclusive ownership' : 'Standard license'}</span>
+                <span>{exclusiveOwnership ? 'No gallery hosting' : 'Gallery hosted'}</span>
+              </div>
               <div className="flex justify-between items-center text-sm font-bold pt-2 border-t mt-2">
                 <span>Total</span>
-                <span>${(visualCount * 0.05 + (exclusiveOwnership ? 2 : 0)).toFixed(2)}</span>
+                <span>${(visualCount * (exclusiveOwnership ? 0.20 : 0.10)).toFixed(2)}</span>
               </div>
             </div>
 

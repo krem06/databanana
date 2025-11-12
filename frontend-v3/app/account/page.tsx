@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Download, Calendar, Image, ArrowLeft, Eye, EyeOff, CreditCard, Plus, X } from "lucide-react"
+import { Download, Calendar, Image, ArrowLeft, Eye, EyeOff, CreditCard, Plus, X, ImageIcon } from "lucide-react"
 import Link from "next/link"
 
 interface BatchHistory {
@@ -32,7 +32,7 @@ export default function Account() {
     confirmPassword: ""
   })
   
-  const [balance, setBalance] = useState(25.50)
+  const [balance] = useState(25.50)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const [batchHistory] = useState<BatchHistory[]>([
@@ -75,7 +75,14 @@ export default function Account() {
             </Button>
             <h1 className="text-3xl font-bold">Account</h1>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" asChild>
+              <Link href="/gallery">
+                <ImageIcon className="h-4 w-4" />
+              </Link>
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
