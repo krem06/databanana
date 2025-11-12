@@ -1,188 +1,173 @@
 import { useState } from 'react'
-import LazyImage from '../components/LazyImage'
-import PageContainer from '../components/PageContainer'
-import PageHeader from '../components/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Download, Search, Star, Eye, Images } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Search, ImageIcon, X } from 'lucide-react'
 
 function Gallery() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedImages, setSelectedImages] = useState(new Set())
+  const [filterTemplate, setFilterTemplate] = useState('')
+  const [zoomedImage, setZoomedImage] = useState(null)
+  const [zoomLevel, setZoomLevel] = useState(1)
 
-  const sampleImages = Array.from({ length: 12 }, (_, i) => ({
-    id: i,
-    url: `https://picsum.photos/300/200?random=${i + 100}`,
-    prompt: `High-quality generated image showing realistic ${['cat on windowsill', 'modern office workspace', 'mountain landscape', 'urban street scene', 'coffee shop interior', 'vintage car', 'garden flowers', 'beach sunset', 'city skyline', 'forest path', 'kitchen interior', 'book collection'][i]} with natural lighting and professional composition`,
-    tags: [['nature', 'animals'], ['workspace', 'modern'], ['landscape', 'outdoor'], ['urban', 'street'], ['interior', 'cafe'], ['vehicle', 'vintage'], ['nature', 'flowers'], ['landscape', 'sunset'], ['urban', 'skyline'], ['nature', 'forest'], ['interior', 'kitchen'], ['objects', 'books']][i],
-    downloads: Math.floor(Math.random() * 1000) + 50,
-    rating: (Math.random() * 2 + 3).toFixed(1)
+  // Mock data - in real app this would come from API
+  const publicImages = Array.from({ length: 24 }, (_, i) => ({
+    id: `img-${i}`,
+    url: `https://picsum.photos/400/300?random=${i + 200}`,
+    prompt: ['cat on windowsill', 'modern office workspace', 'mountain landscape', 'urban street scene', 'coffee shop interior', 'vintage car', 'garden flowers', 'beach sunset'][i % 8],
+    template: ['realistic', 'artistic', 'minimalist', 'vintage'][i % 4],
+    date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
   }))
 
-  const filteredImages = sampleImages.filter(image => 
-    image.prompt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    image.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
-
-  const toggleImageSelection = (imageId) => {
-    const newSelected = new Set(selectedImages)
-    if (newSelected.has(imageId)) {
-      newSelected.delete(imageId)
-    } else {
-      newSelected.add(imageId)
-    }
-    setSelectedImages(newSelected)
-  }
+  const filteredImages = publicImages.filter(image => {
+    const matchesSearch = !searchTerm || 
+      image.prompt.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesTemplate = !filterTemplate || filterTemplate === 'all' || image.template === filterTemplate
+    return matchesSearch && matchesTemplate
+  })
 
   return (
-    <PageContainer>
-      <PageHeader 
-        icon={Images}
-        badge="Community Datasets"
-        title="Public Gallery"
-        description="Browse and download community-validated ML datasets for free"
-      />
-
-      {/* Search Bar */}
-      <Card className="mb-8">
-        <CardContent className="p-6">
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search by prompt, tags, or concepts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card className="text-center">
-          <CardContent className="p-4">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-3">
-              <Images className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div className="text-2xl font-bold text-primary mb-1">{filteredImages.length}</div>
-            <div className="text-sm text-muted-foreground">Available Images</div>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="p-4">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-3">
-              <Star className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div className="text-2xl font-bold text-primary mb-1">{selectedImages.size}</div>
-            <div className="text-sm text-muted-foreground">Selected</div>
-          </CardContent>
-        </Card>
-        <Card className="text-center">
-          <CardContent className="p-4">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-3">
-              <Download className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div className="text-2xl font-bold text-primary mb-1">${(selectedImages.size * 0.1).toFixed(2)}</div>
-            <div className="text-sm text-muted-foreground">Export Cost</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Image Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-          {filteredImages.map((image) => (
-            <Card 
-              key={image.id} 
-              className={`overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer group ${
-                selectedImages.has(image.id) ? 'ring-2 ring-primary shadow-lg scale-105' : ''
-              }`}
-              onClick={() => toggleImageSelection(image.id)}
-            >
-              <div className="relative overflow-hidden">
-                <LazyImage
-                  src={image.url}
-                  alt={image.prompt}
-                  className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                {selectedImages.has(image.id) && (
-                  <div className="absolute top-3 right-3 w-7 h-7 bg-primary rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-primary-foreground text-sm font-bold">✓</span>
-                  </div>
-                )}
-                <div className="absolute bottom-3 left-3 flex gap-2">
-                  <Badge variant="secondary" className="text-xs bg-black/80 text-white border-0">
-                    <Star className="h-3 w-3 mr-1" />
-                    {image.rating}
-                  </Badge>
-                  <Badge variant="secondary" className="text-xs bg-black/80 text-white border-0">
-                    <Eye className="h-3 w-3 mr-1" />
-                    {image.downloads}
-                  </Badge>
-                </div>
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-              </div>
-              
-              <CardContent className="p-5">
-                <p className="text-sm mb-4 line-clamp-2 text-muted-foreground leading-relaxed">
-                  {image.prompt}
-                </p>
-                
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {image.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline" className="text-xs px-2 py-1">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full h-9 font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // Handle direct download
-                  }}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Free
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+    <main className="min-h-screen bg-background">
+      <div className="container max-w-6xl mx-auto px-4 py-8 md:py-12">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+            Gallery
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Browse your images from standard licenses.
+          </p>
         </div>
 
-      {/* Export Section */}
-      {selectedImages.size > 0 && (
-        <Card className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md border shadow-xl bg-white dark:bg-gray-900 z-40">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Download className="h-4 w-4 text-primary-foreground" />
+        {/* Filters */}
+        <Card className="mb-8">
+          <CardContent className="pt-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Search Images</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search by description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-sm">Export Selected</h3>
-                <p className="text-xs text-muted-foreground">
-                  {selectedImages.size} images • ${(selectedImages.size * 0.1).toFixed(2)}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedImages(new Set())}>
-                  Clear
-                </Button>
-                <Button size="sm">
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
+              <div className="space-y-2">
+                <Label>Filter by Style</Label>
+                <Select value={filterTemplate} onValueChange={setFilterTemplate}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All styles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All styles</SelectItem>
+                    <SelectItem value="realistic">Realistic</SelectItem>
+                    <SelectItem value="artistic">Artistic</SelectItem>
+                    <SelectItem value="minimalist">Minimalist</SelectItem>
+                    <SelectItem value="vintage">Vintage</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
-    </PageContainer>
+
+        {/* Results Count */}
+        <div className="mb-6">
+          <p className="text-sm text-muted-foreground">
+            {filteredImages.length} image{filteredImages.length !== 1 ? 's' : ''} found
+          </p>
+        </div>
+
+        {/* Image Grid */}
+        {filteredImages.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredImages.map((image) => (
+              <div
+                key={image.id}
+                className="group cursor-pointer"
+                onClick={() => {
+                  setZoomedImage(image.url)
+                  setZoomLevel(1)
+                }}
+              >
+                <div className="relative overflow-hidden rounded-lg bg-muted">
+                  <img
+                    src={image.url}
+                    alt={image.prompt}
+                    className="w-full h-48 object-cover transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                </div>
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm font-medium line-clamp-1">{image.prompt}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{image.template}</span>
+                    <span>•</span>
+                    <span>{image.date}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Card className="text-center py-16">
+            <CardContent>
+              <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No images found</h3>
+              <p className="text-sm text-muted-foreground">
+                Try adjusting your search or filter criteria.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Image Zoom Modal */}
+        {zoomedImage && (
+          <div 
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4" 
+            onClick={() => setZoomedImage(null)}
+          >
+            <div 
+              className="relative w-full h-full flex items-center justify-center overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => {
+                e.preventDefault()
+                const delta = e.deltaY > 0 ? -0.1 : 0.1
+                setZoomLevel(prev => Math.max(0.5, Math.min(3, prev + delta)))
+              }}
+            >
+              <img
+                src={zoomedImage}
+                alt="Zoomed image"
+                className="transition-transform duration-200 rounded-lg"
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  maxWidth: '90vw',
+                  maxHeight: '90vh',
+                  objectFit: 'contain'
+                }}
+                draggable={false}
+              />
+              
+              <button
+                className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                onClick={() => setZoomedImage(null)}
+              >
+                <X className="w-4 h-4" />
+              </button>
+              
+              <div className="absolute bottom-4 left-4 bg-black/50 text-white text-sm px-2 py-1 rounded">
+                {Math.round(zoomLevel * 100)}%
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   )
 }
 
