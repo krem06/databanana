@@ -67,24 +67,21 @@ def analyze_image_with_rekognition(bucket, s3_key):
     """
     try:
         print(f'🤖 REKOGNITION API: bucket={bucket} key={s3_key}')
-        # Detect labels
-        label_response = rekognition.detect_labels(
+        
+        # Single detect_labels call gets both labels AND bounding boxes
+        response = rekognition.detect_labels(
             Image={'S3Object': {'Bucket': bucket, 'Name': s3_key}},
             MaxLabels=20,
             MinConfidence=70
         )
         
-        labels = [label['Name'] for label in label_response['Labels']]
+        # Extract labels
+        labels = [label['Name'] for label in response['Labels']]
         print(f'🏷️ LABELS FOUND: {len(labels)} labels detected')
         
-        # Detect objects and get bounding boxes
-        object_response = rekognition.detect_labels(
-            Image={'S3Object': {'Bucket': bucket, 'Name': s3_key}},
-            MinConfidence=70
-        )
-        
+        # Extract bounding boxes from the same response
         bounding_boxes = []
-        for label in object_response.get('Labels', []):
+        for label in response.get('Labels', []):
             if 'Instances' in label:
                 for instance in label['Instances']:
                     if 'BoundingBox' in instance:

@@ -28,9 +28,9 @@ def handler(event, context):
         print(f'📊 STATUS RESULT: {batch_status.state} | execution_id={execution_id}')
         
         # Map Gemini states to our states
-        if batch_status.state == 'STATE_SUCCEEDED':
+        if batch_status.state in ['STATE_SUCCEEDED', 'JOB_STATE_SUCCEEDED']:
             status = 'completed'
-        elif batch_status.state in ['STATE_FAILED', 'STATE_CANCELLED']:
+        elif batch_status.state in ['STATE_FAILED', 'STATE_CANCELLED', 'JOB_STATE_FAILED', 'JOB_STATE_CANCELLED']:
             status = 'failed'
         else:
             status = 'processing'

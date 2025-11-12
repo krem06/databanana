@@ -18,7 +18,7 @@ def handler(event, context):
         print(f'📋 VALIDATE START: execution_id={execution_id} user={cognito_user_id} images={image_count}')
         
         # Validate image count
-        if not isinstance(image_count, int) or image_count < 10 or image_count > 100:
+        if not isinstance(image_count, int) or image_count < 1 or image_count > 100:
             print(f'❌ VALIDATION ERROR: Invalid image count {image_count}')
             raise ValueError('Image count must be between 10 and 100')
         
@@ -64,6 +64,7 @@ def handler(event, context):
         
         # Return data for next step
         return {
+            'execution_id': execution_id,
             'batch_id': batch_id,
             'context': context_text,
             'exclude_tags': exclude_tags,

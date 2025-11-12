@@ -45,7 +45,7 @@ CREATE TABLE images (
     batch_id INTEGER REFERENCES batches(id),
     dataset_id INTEGER REFERENCES datasets(id),
     prompt TEXT,
-    url VARCHAR(500),
+    url TEXT,
     tags JSONB,
     rekognition_labels JSONB,
     bounding_boxes JSONB,

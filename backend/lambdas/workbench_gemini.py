@@ -2,7 +2,13 @@ import json
 import os
 import time
 from google import genai
-from cors_utils import get_cors_headers
+def get_workbench_cors_headers():
+    return {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+        'Content-Type': 'application/json'
+    }
 
 # Configure Gemini client
 gemini_client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
@@ -11,6 +17,14 @@ def lambda_handler(event, context):
     """
     Workbench: Start Gemini batch job and return job ID immediately
     """
+    # Handle CORS preflight requests
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': get_workbench_cors_headers(),
+            'body': ''
+        }
+    
     try:
         # Parse request body
         if isinstance(event.get('body'), str):
@@ -26,7 +40,7 @@ def lambda_handler(event, context):
                 'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
-                    **get_cors_headers()
+                    **get_workbench_cors_headers()
                 },
                 'body': json.dumps({'error': 'Requests array is required'})
             }
@@ -47,7 +61,7 @@ def lambda_handler(event, context):
                 'statusCode': 400,
                 'headers': {
                     'Content-Type': 'application/json',
-                    **get_cors_headers()
+                    **get_workbench_cors_headers()
                 },
                 'body': json.dumps({'error': 'No valid prompts found in requests'})
             }
@@ -72,15 +86,16 @@ def lambda_handler(event, context):
         
         print(f"Created batch job: {batch_job.name}")
         
-        # Return job ID immediately
+        # Return job ID immediately (strip batches/ prefix)
+        clean_job_id = batch_job.name.replace('batches/', '')
         return {
             'statusCode': 202,  # Accepted
             'headers': {
                     'Content-Type': 'application/json',
-                    **get_cors_headers()
+                    **get_workbench_cors_headers()
                 },
             'body': json.dumps({
-                'job_id': batch_job.name,
+                'job_id': clean_job_id,
                 'status': 'processing',
                 'message': 'Batch job started. Use job_id to check status.',
                 'prompts_count': len(prompts)
@@ -93,7 +108,7 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'headers': {
                     'Content-Type': 'application/json',
-                    **get_cors_headers()
+                    **get_workbench_cors_headers()
                 },
             'body': json.dumps({
                 'error': 'Failed to start batch job',

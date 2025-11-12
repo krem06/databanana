@@ -26,7 +26,7 @@ Globals:
     Cors:
       AllowMethods: "'GET,POST,PUT,OPTIONS'"
       AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
-      AllowOrigin: !Sub "'${FrontendUrl}'"
+      AllowOrigin: "'*'"
       MaxAge: "'600'"
     Auth:
       Authorizers:
@@ -445,6 +445,9 @@ Resources:
       Handler: workbench_claude.lambda_handler
       Timeout: 60
       MemorySize: 512
+      Environment:
+        Variables:
+          ANTHROPIC_API_KEY: !Ref AnthropicApiKey
       Events:
         WorkbenchClaude:
           Type: Api
@@ -464,6 +467,10 @@ Resources:
       Handler: workbench_gemini.lambda_handler
       Timeout: 600  # 10 minutes for batch processing + image download
       MemorySize: 1024
+      Environment:
+        Variables:
+          GEMINI_API_KEY: !Ref GeminiApiKey
+          S3_BUCKET: !Ref ImageBucket
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref ImageBucket
@@ -486,6 +493,10 @@ Resources:
       Handler: workbench_status.lambda_handler
       Timeout: 60
       MemorySize: 1024
+      Environment:
+        Variables:
+          GEMINI_API_KEY: !Ref GeminiApiKey
+          S3_BUCKET: !Ref ImageBucket
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref ImageBucket
@@ -495,6 +506,36 @@ Resources:
           Properties:
             Path: /workbench/status/{job_id}
             Method: get
+        WorkbenchStatusOptions:
+          Type: Api
+          Properties:
+            Path: /workbench/status/{job_id}
+            Method: options
+  WorkbenchRekognitionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: workbench_rekognition.lambda_handler
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref ImageBucket
+      Policies:
+        - RekognitionDetectOnlyPolicy: {}
+        - S3ReadPolicy:
+            BucketName: !Ref ImageBucket
+      Events:
+        WorkbenchRekognition:
+          Type: Api
+          Properties:
+            Path: /workbench/rekognition
+            Method: post
+        WorkbenchRekognitionOptions:
+          Type: Api
+          Properties:
+            Path: /workbench/rekognition
+            Method: options
 
   # Step Functions State Machine
   ImageGenerationStateMachine:
@@ -564,7 +605,7 @@ Resources:
               "batch_id.$": "$.batch_id"
               "variations.$": "$.variations"
               "gemini_batch_id.$": "$.gemini_batch_id"
-              "execution_id.$": "$.execution_id"
+              "execution_id.$": "$$.Execution.Name"
             Next: "WaitForImages"
           ProcessImages:
             Type: "Task"

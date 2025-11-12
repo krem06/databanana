@@ -27,7 +27,56 @@ def handler(event, context):
         
         # Get batch results from Gemini
         print(f'📞 GEMINI FETCH: Retrieving results for job_id={gemini_batch_id}')
-        batch_responses = gemini_client.batches.list_outputs(name=gemini_batch_id)
+        batch_job = gemini_client.batches.get(name=gemini_batch_id)
+        
+        print(f'🔍 BATCH JOB DEBUG: state={batch_job.state.name}')
+        print(f'🔍 BATCH JOB DEST: {batch_job.dest}')
+        
+        if batch_job.state.name != 'JOB_STATE_SUCCEEDED':
+            raise Exception(f'Batch job not succeeded: {batch_job.state.name}')
+            
+        # Check if responses are inlined in the batch job
+        if hasattr(batch_job.dest, 'inlined_responses') and batch_job.dest.inlined_responses:
+            print(f'🔍 USING INLINED RESPONSES: {len(batch_job.dest.inlined_responses)} responses')
+            batch_responses = [resp.response for resp in batch_job.dest.inlined_responses]
+        elif hasattr(batch_job.dest, 'output_uri') and batch_job.dest.output_uri:
+            print(f'🔍 USING OUTPUT_URI: {batch_job.dest.output_uri}')
+            # Extract file name from output_uri
+            import re
+            file_match = re.search(r'files/([^/]+)$', batch_job.dest.output_uri)
+            if file_match:
+                result_file_name = file_match.group(1)
+            else:
+                raise Exception(f'Could not extract file name from output_uri: {batch_job.dest.output_uri}')
+            print(f'📁 DOWNLOADING FILE: {result_file_name}')
+            file_content_bytes = gemini_client.files.download(file=result_file_name)
+            file_content = file_content_bytes.decode('utf-8')
+            
+            # Parse JSONL responses
+            batch_responses = []
+            for line in file_content.splitlines():
+                if line.strip():
+                    import json
+                    response_data = json.loads(line)
+                    if 'response' in response_data:
+                        batch_responses.append(response_data['response'])
+        elif hasattr(batch_job.dest, 'file_name') and batch_job.dest.file_name:
+            result_file_name = batch_job.dest.file_name
+            print(f'📁 DOWNLOADING FILE: {result_file_name}')
+            file_content_bytes = gemini_client.files.download(file=result_file_name)
+            file_content = file_content_bytes.decode('utf-8')
+            
+            # Parse JSONL responses
+            batch_responses = []
+            for line in file_content.splitlines():
+                if line.strip():
+                    import json
+                    response_data = json.loads(line)
+                    if 'response' in response_data:
+                        batch_responses.append(response_data['response'])
+        else:
+            raise Exception(f'No valid file reference found in batch job dest: {batch_job.dest}')
+        
         print(f'📄 RESPONSES RECEIVED: {len(batch_responses)} results | execution_id={execution_id}')
         
         images = []
@@ -56,8 +105,12 @@ def handler(event, context):
                         ContentType='image/png'
                     )
                     
-                    # Generate public URL
-                    url = f"https://{bucket}.s3.amazonaws.com/{key}"
+                    # Generate pre-signed URL (valid for 24 hours)
+                    url = s3_client.generate_presigned_url(
+                        'get_object',
+                        Params={'Bucket': bucket, 'Key': key},
+                        ExpiresIn=86400  # 24 hours
+                    )
                     
                     images.append({
                         'id': i,

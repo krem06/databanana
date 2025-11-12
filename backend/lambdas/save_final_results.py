@@ -52,6 +52,7 @@ def handler(event, context):
         print(f'✅ WORKFLOW COMPLETE: execution_id={execution_id} batch_id={batch_id} images={len(images)}')
         
         return {
+            **event,
             'batch_id': batch_id,
             'status': 'completed',
             'image_count': len(images),

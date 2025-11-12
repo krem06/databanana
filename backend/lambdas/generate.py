@@ -31,7 +31,7 @@ def handler(event, context):
         print(f'🚀 GENERATE START: context="{context_text[:50]}..." images={image_count} user={cognito_user_id}')
         
         # Basic validation
-        if not isinstance(image_count, int) or image_count < 10 or image_count > 100:
+        if not isinstance(image_count, int) or image_count < 1 or image_count > 100:
             print(f'❌ VALIDATION ERROR: Invalid image count {image_count}')
             return cors_response(400, {'error': 'Image count must be between 10 and 100'})
         
