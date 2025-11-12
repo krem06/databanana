@@ -1,14 +1,13 @@
 # 🍌 Databanana Workbench
 
-Simple testing interface for AI services (Claude & Gemini Flash).
+Simple testing interface for AI services (Claude Haiku & Gemini Flash image generation).
 
 ## Setup
 
 1. **Update API Configuration**
-   Edit `script.js` and update these variables:
+   Edit `script.js` and update the API Gateway URL:
    ```javascript
-   const API_BASE_URL = 'https://your-api-gateway-url.com';
-   const API_KEY = 'your-api-key';
+   const API_GATEWAY_URL = 'https://your-actual-api-gateway-url.amazonaws.com/Prod';
    ```
 
 2. **Open in Browser**
@@ -35,27 +34,38 @@ Simple testing interface for AI services (Claude & Gemini Flash).
 - View results in JSON format (accordion)
 - View images in gallery format with zoom capability
 
-## API Endpoints Expected
+## API Endpoints Used
 
-The workbench expects these backend endpoints:
+The workbench uses these backend endpoints:
 
 ### Claude Endpoint
 ```
-POST /generate-prompts
+POST /workbench/claude
 {
   "prompt": "string",
-  "context": "string", 
-  "exclude_tags": "string",
-  "num_generations": number
+  "model": "claude-3-5-haiku-20241022",
+  "max_tokens": 2000
 }
 ```
 
 ### Gemini Endpoint
 ```
-POST /generate-images
+POST /workbench/gemini
 {
-  "requests": [...] // Gemini batch format
+  "requests": [
+    {
+      "contents": [{
+        "parts": [{"text": "prompt"}],
+        "role": "user"
+      }]
+    }
+  ]
 }
+```
+
+### Status Endpoint
+```
+GET /workbench/status/{job_id}
 ```
 
 ## File Structure

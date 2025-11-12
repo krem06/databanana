@@ -1,6 +1,17 @@
 // Configuration  
 // Update this with your actual API Gateway URL
-const API_GATEWAY_URL = 'https://your-api-gateway-url.amazonaws.com';
+const API_GATEWAY_URL = 'https://dkor79bcf8.execute-api.eu-west-1.amazonaws.com/Prod';
+
+// Cost tracking for session totals
+let totalCosts = {
+    claude: 0,
+    gemini: 0,
+    rekognition: 0,
+    total: 0
+};
+
+// Disable CORS for local testing (Chrome with --disable-web-security)
+// Alternative: Use a simple proxy or run via local server
 
 // DOM Elements
 const elements = {
@@ -16,8 +27,53 @@ const elements = {
     imageGallery: document.getElementById('image-gallery'),
     loading: document.getElementById('loading'),
     modalImage: document.getElementById('modal-image'),
-    imageModal: document.getElementById('image-modal')
+    imageModal: document.getElementById('image-modal'),
+    imagesJson: document.getElementById('images-json'),
+    rekognitionResponse: document.getElementById('rekognition-response'),
+    rekognitionResults: document.getElementById('rekognition-results'),
+    labeledGallery: document.getElementById('labeled-gallery')
 };
+
+
+/**
+ * Update cost display with actual costs from API responses
+ */
+function updateCostDisplay(service, actualCostData, details = '') {
+    if (!actualCostData || typeof actualCostData.total_cost_usd === 'undefined') {
+        console.warn(`No actual cost data available for ${service}`);
+        return;
+    }
+    
+    const actualCost = actualCostData.total_cost_usd;
+    totalCosts[service] += actualCost;
+    totalCosts.total = totalCosts.claude + totalCosts.gemini + totalCosts.rekognition;
+    
+    // Create or update cost display
+    let costElement = document.getElementById(`${service}-cost`);
+    if (!costElement) {
+        costElement = document.createElement('div');
+        costElement.id = `${service}-cost`;
+        costElement.className = 'cost-display';
+        
+        // Find the appropriate results section and add cost display
+        const resultsSection = service === 'claude' ? elements.claudeResults :
+                              service === 'gemini' ? elements.geminiResults :
+                              elements.rekognitionResults;
+        
+        if (resultsSection) {
+            resultsSection.insertBefore(costElement, resultsSection.firstChild);
+        }
+    }
+    
+    const costHtml = `
+        <div class="cost-info">
+            💰 <strong>${service.toUpperCase()} Cost:</strong> $${actualCost.toFixed(6)} ${details}
+            <br>💳 <strong>Total Session Cost:</strong> $${totalCosts.total.toFixed(6)}
+        </div>
+    `;
+    
+    costElement.innerHTML = costHtml;
+}
 
 // Event Listeners
 document.getElementById('generate-claude-prompt').addEventListener('click', generateClaudePromptFromConfig);
@@ -26,6 +82,9 @@ document.getElementById('send-claude').addEventListener('click', sendToClaude);
 document.getElementById('next-to-gemini').addEventListener('click', prepareGeminiPayload);
 document.getElementById('populate-gemini').addEventListener('click', populateGeminiPayload);
 document.getElementById('send-gemini').addEventListener('click', sendToGemini);
+document.getElementById('load-generated-images').addEventListener('click', loadGeneratedImages);
+document.getElementById('validate-json').addEventListener('click', validateImagesJson);
+document.getElementById('analyze-images').addEventListener('click', analyzeImages);
 
 /**
  * Generate Claude prompt using the actual backend template with user configuration
@@ -33,7 +92,18 @@ document.getElementById('send-gemini').addEventListener('click', sendToGemini);
 function generateClaudePromptFromConfig() {
     const context = elements.context.value || 'A beautiful landscape';
     const excludeTags = elements.excludeTags.value || 'violence, inappropriate content';
-    const numGen = elements.numGenerations.value || 1;
+    const numGen = parseInt(elements.numGenerations.value) || 1;
+    
+    // Warn about large batch sizes
+    if (numGen > 50) {
+        if (!confirm(`⚠️ You're requesting ${numGen} images.\n⏱️ This will take a long time.\n\nContinue?`)) {
+            return;
+        }
+    } else if (numGen > 20) {
+        if (!confirm(`⚠️ You're requesting ${numGen} images.\n⏱️ This may take several minutes.\n\nContinue?`)) {
+            return;
+        }
+    }
 
     // Use the exact prompt template from backend/lambdas/generate_prompts.py
     const actualPrompt = `Generate exactly ${numGen} diverse, realistic image prompts based on: "${context}"
@@ -99,12 +169,14 @@ async function sendToClaude() {
         // Call workbench Claude endpoint
         const response = await fetch(`${API_GATEWAY_URL}/workbench/claude`, {
             method: 'POST',
+            mode: 'cors',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
                 prompt: prompt,
-                model: 'claude-3-5-haiku-20241022',
+                model: 'claude-haiku-4-5-20251001',
                 max_tokens: 2000
             })
         });
@@ -114,6 +186,13 @@ async function sendToClaude() {
         }
 
         const data = await response.json();
+        
+        // Display actual cost from API response
+        if (data.cost) {
+            const usage = data.response?.usage || {};
+            const details = usage.input_tokens ? `(${usage.input_tokens} in + ${usage.output_tokens} out tokens)` : '';
+            updateCostDisplay('claude', data.cost, details);
+        }
         
         // Display Claude response
         elements.claudeResponse.textContent = JSON.stringify(data, null, 2);
@@ -142,7 +221,7 @@ function prepareGeminiPayload() {
         return;
     }
 
-    // Create Gemini batch payload structure
+    // Create Gemini batch payload structure for your backend
     const geminiPayload = {
         requests: []
     };
@@ -152,16 +231,12 @@ function prepareGeminiPayload() {
     
     prompts.forEach((prompt) => {
         geminiPayload.requests.push({
-            model: "gemini-1.5-flash",
             contents: [{
                 parts: [{
-                    text: `Generate a detailed image description based on this prompt: ${prompt}`
-                }]
-            }],
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 1000
-            }
+                    text: prompt
+                }],
+                role: "user"
+            }]
         });
     });
 
@@ -178,16 +253,12 @@ function populateGeminiPayload() {
     const defaultPayload = {
         requests: [
             {
-                model: "gemini-1.5-flash",
                 contents: [{
                     parts: [{
-                        text: "Generate a detailed image of a serene mountain landscape with a crystal-clear lake reflecting the peaks, surrounded by pine trees, with dramatic clouds in the sky, photorealistic style"
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 1000
-                }
+                        text: "Create a photorealistic image of a serene mountain landscape with a crystal-clear lake reflecting the peaks, surrounded by pine trees, with dramatic clouds in the sky, natural lighting"
+                    }],
+                    role: "user"
+                }]
             }
         ]
     };
@@ -213,6 +284,14 @@ async function sendToGemini() {
         alert('Invalid JSON payload');
         return;
     }
+    
+    // Final warning for large batches
+    const requestCount = parsedPayload.requests ? parsedPayload.requests.length : 0;
+    if (requestCount > 20) {
+        if (!confirm(`⚠️ Final confirmation: You're about to send ${requestCount} image generation requests to Gemini. This will incur significant costs. Proceed?`)) {
+            return; // User can cancel here too
+        }
+    }
 
     showLoading(true);
     
@@ -220,8 +299,10 @@ async function sendToGemini() {
         // Start job
         const response = await fetch(`${API_GATEWAY_URL}/workbench/gemini`, {
             method: 'POST',
+            mode: 'cors',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify(parsedPayload)
         });
@@ -233,7 +314,6 @@ async function sendToGemini() {
         const startData = await response.json();
         
         if (startData.job_id) {
-            // Start polling for results
             pollJobStatus(startData.job_id);
         } else {
             throw new Error('No job_id received');
@@ -266,7 +346,13 @@ async function pollJobStatus(jobId) {
             }
             
             // Check status
-            const response = await fetch(`${API_GATEWAY_URL}/workbench/status/${jobId}`);
+            const response = await fetch(`${API_GATEWAY_URL}/workbench/status/${jobId}`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -278,7 +364,24 @@ async function pollJobStatus(jobId) {
             if (data.status === 'completed') {
                 // Job finished successfully
                 showLoading(false);
+                
+                // Display actual cost from API response
+                if (data.cost) {
+                    const imageCount = data.images ? data.images.length : 0;
+                    const details = imageCount > 0 ? `(${imageCount} images generated)` : '';
+                    updateCostDisplay('gemini', data.cost, details);
+                }
+                
                 elements.geminiResponse.textContent = JSON.stringify(data, null, 2);
+                
+                // Store generated images for rekognition step
+                window.generatedImages = data.images || [];
+                
+                // Auto-populate images JSON editor
+                if (window.generatedImages.length > 0) {
+                    elements.imagesJson.value = JSON.stringify(window.generatedImages, null, 2);
+                }
+                
                 displayImageGallery(data);
                 elements.geminiResults.style.display = 'block';
                 console.log('Job completed successfully');
@@ -401,6 +504,168 @@ window.onclick = function(event) {
     if (event.target === elements.imageModal) {
         closeModal();
     }
+}
+
+/**
+ * Load generated images into JSON editor
+ */
+function loadGeneratedImages() {
+    if (!window.generatedImages || window.generatedImages.length === 0) {
+        alert('No generated images available. Please complete Step 3 first.');
+        return;
+    }
+    
+    elements.imagesJson.value = JSON.stringify(window.generatedImages, null, 2);
+    alert('Generated images loaded into JSON editor.');
+}
+
+/**
+ * Validate the images JSON
+ */
+function validateImagesJson() {
+    const jsonText = elements.imagesJson.value.trim();
+    
+    if (!jsonText) {
+        alert('JSON editor is empty. Please load generated images or enter valid JSON.');
+        return;
+    }
+    
+    try {
+        const parsed = JSON.parse(jsonText);
+        if (!Array.isArray(parsed)) {
+            alert('JSON must be an array of image objects.');
+            return;
+        }
+        
+        if (parsed.length === 0) {
+            alert('JSON array is empty. Please add some image objects.');
+            return;
+        }
+        
+        // Check if images have required fields
+        for (let i = 0; i < parsed.length; i++) {
+            const img = parsed[i];
+            if (!img.url && !img.s3_key) {
+                alert(`Image ${i + 1} is missing 'url' or 's3_key' field.`);
+                return;
+            }
+        }
+        
+        alert(`✅ JSON is valid! Found ${parsed.length} image(s) ready for analysis.`);
+    } catch (error) {
+        alert(`❌ Invalid JSON: ${error.message}`);
+    }
+}
+
+/**
+ * Analyze images with AWS Rekognition using JSON from editor
+ */
+async function analyzeImages() {
+    const jsonText = elements.imagesJson.value.trim();
+    
+    if (!jsonText) {
+        alert('Please load images into the JSON editor first (Step 4).');
+        return;
+    }
+    
+    let imagesToAnalyze;
+    try {
+        imagesToAnalyze = JSON.parse(jsonText);
+        if (!Array.isArray(imagesToAnalyze) || imagesToAnalyze.length === 0) {
+            alert('JSON must be a non-empty array of image objects.');
+            return;
+        }
+    } catch (error) {
+        alert(`Invalid JSON: ${error.message}`);
+        return;
+    }
+
+    showLoading(true);
+    
+    try {
+        // Call workbench rekognition endpoint
+        const response = await fetch(`${API_GATEWAY_URL}/workbench/rekognition`, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                images: imagesToAnalyze
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Get analyzed images
+        const analyzedImages = data.labeled_images || data.images || [];
+        
+        // Display actual cost from API response
+        if (data.cost) {
+            const details = analyzedImages.length > 0 ? `(${analyzedImages.length} images analyzed)` : '';
+            updateCostDisplay('rekognition', data.cost, details);
+        }
+        
+        // Display rekognition results
+        elements.rekognitionResponse.textContent = JSON.stringify(data, null, 2);
+        elements.rekognitionResults.style.display = 'block';
+        
+        // Display labeled images with bounding boxes
+        displayLabeledImages(analyzedImages);
+        
+        // Scroll to rekognition section
+        document.querySelector('#rekognition-results').scrollIntoView({ behavior: 'smooth' });
+        
+    } catch (error) {
+        console.error('Error analyzing images:', error);
+        alert('Error analyzing images: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+/**
+ * Display labeled images with rekognition data
+ */
+function displayLabeledImages(labeledImages) {
+    elements.labeledGallery.innerHTML = '';
+    
+    if (labeledImages.length === 0) {
+        elements.labeledGallery.innerHTML = '<p>No labeled images found</p>';
+        return;
+    }
+    
+    labeledImages.forEach((image, index) => {
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'labeled-image-item';
+        
+        const img = document.createElement('img');
+        img.src = image.url;
+        img.alt = `Labeled image ${index + 1}`;
+        img.onclick = () => openImageModal(image.url);
+        
+        const labelsDiv = document.createElement('div');
+        labelsDiv.className = 'image-labels';
+        
+        const labels = image.rekognition_labels || [];
+        const confidence = image.bounding_boxes || [];
+        
+        labelsDiv.innerHTML = `
+            <h4>Image ${index + 1}</h4>
+            <p><strong>Labels:</strong> ${labels.slice(0, 5).join(', ') || 'None detected'}</p>
+            <p><strong>Objects:</strong> ${confidence.length} detected</p>
+            <p><strong>Prompt:</strong> ${image.prompt || 'N/A'}</p>
+        `;
+        
+        imageContainer.appendChild(img);
+        imageContainer.appendChild(labelsDiv);
+        elements.labeledGallery.appendChild(imageContainer);
+    });
 }
 
 // Initialize with default values

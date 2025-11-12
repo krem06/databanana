@@ -24,7 +24,7 @@
             </div>
             <div class="form-group">
                 <label for="num-generations">Number of Generations:</label>
-                <input type="number" id="num-generations" value="1" min="1" max="10">
+                <input type="number" id="num-generations" value="1" min="1" max="100">
             </div>
             <button id="generate-claude-prompt" class="btn btn-success">Generate Claude Prompt from Configuration</button>
         </div>
@@ -87,6 +87,54 @@
         <div id="loading" class="loading" style="display: none;">
             <div class="spinner"></div>
             <p>Processing...</p>
+        </div>
+    </div>
+
+    <!-- Step 4: Edit Images JSON -->
+    <div class="step-section">
+        <h2 class="step-title" onclick="toggleAccordion('edit-images-content')">
+            Step 4: Edit Images JSON 
+            <span class="accordion-toggle">▼</span>
+        </h2>
+        <div id="edit-images-content" class="step-content" style="display: none;">
+            <p>Review and edit the generated images JSON before sending to Rekognition. You can modify URLs to test different images.</p>
+            
+            <div class="section">
+                <h3>Images JSON</h3>
+                <textarea id="images-json" rows="15" style="width: 100%; font-family: monospace; font-size: 12px;" placeholder="Generated images JSON will appear here after Step 3 completes..."></textarea>
+                <div style="margin-top: 10px;">
+                    <button id="load-generated-images" class="btn btn-secondary">Load Generated Images</button>
+                    <button id="validate-json" class="btn btn-secondary">Validate JSON</button>
+                    <p class="helper-text">Edit URLs to test Rekognition on different images. JSON must be a valid array of image objects.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 5: Test Rekognition -->
+    <div class="step-section">
+        <h2 class="step-title" onclick="toggleAccordion('rekognition-content')">
+            Step 5: Test AWS Rekognition 
+            <span class="accordion-toggle">▼</span>
+        </h2>
+        <div id="rekognition-content" class="step-content" style="display: none;">
+            <p>Test AWS Rekognition on the images from Step 4.</p>
+            
+            <div class="section">
+                <h3>Image Analysis</h3>
+                <p>Analyze images with the JSON from Step 4:</p>
+                <button id="analyze-images" class="btn btn-primary">Analyze Images with Rekognition</button>
+                <p class="helper-text">This will run AWS Rekognition on the images defined in the JSON above.</p>
+            </div>
+
+            <div id="rekognition-results" class="results-section" style="display: none;">
+                <h3>Rekognition Results</h3>
+                <pre id="rekognition-response"></pre>
+                
+                <div id="labeled-gallery" class="image-gallery">
+                    <!-- Labeled images with bounding boxes will be displayed here -->
+                </div>
+            </div>
         </div>
     </div>
 

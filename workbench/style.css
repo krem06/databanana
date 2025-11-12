@@ -347,3 +347,87 @@ pre {
     color: #721c24;
     border: 1px solid #f5c6cb;
 }
+
+/* Labeled images gallery */
+.labeled-image-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    background: #f9f9f9;
+}
+
+.labeled-image-item img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.labeled-image-item img:hover {
+    transform: scale(1.05);
+}
+
+.image-labels {
+    text-align: center;
+    font-size: 0.9em;
+}
+
+.image-labels h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.image-labels p {
+    margin: 2px 0;
+    color: #666;
+}
+
+#labeled-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Cost tracking displays */
+.cost-display {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 10px 0;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.cost-info {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.cost-info strong {
+    font-weight: 600;
+}
+
+#claude-cost {
+    background: linear-gradient(135deg, #FF6B35, #F7931E);
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+#gemini-cost {
+    background: linear-gradient(135deg, #4285F4, #1a73e8);
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+}
+
+#rekognition-cost {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
