@@ -46,13 +46,42 @@ def handler(event, context):
             raise ValueError(f'Insufficient credits. Need ${cost:.2f} but you have ${user_credits:.2f}')
         
         print(f'💰 DEDUCTING CREDITS: ${cost:.2f} from user_id={user_db_id}')
-        # Deduct credits and create batch record
+        # Deduct credits
         cur.execute('UPDATE users SET credits = credits - %s WHERE id = %s', (cost, user_db_id))
         
-        # Create batch record with processing status
-        cur.execute('''INSERT INTO batches (user_id, context, exclude_tags, image_count, cost, status, current_step, progress, created_at, updated_at) 
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
-                    (user_db_id, context_text, exclude_tags, image_count, cost, 'processing', 'ValidateAndSetup', 10))
+        # Create or get today's dataset
+        from datetime import date
+        today_date = date.today().strftime('%m/%d/%Y')
+        dataset_name = f'Images {today_date}'
+        
+        print(f'📁 DATASET LOOKUP: Finding/creating dataset "{dataset_name}"')
+        
+        # Check if dataset exists for this user today
+        cur.execute('SELECT id FROM datasets WHERE user_id = %s AND name = %s', (user_db_id, dataset_name))
+        dataset_result = cur.fetchone()
+        
+        if dataset_result:
+            dataset_id = dataset_result[0]
+            print(f'📁 DATASET FOUND: Using existing dataset_id={dataset_id}')
+        else:
+            # Create new dataset for today
+            cur.execute('''INSERT INTO datasets (user_id, name, total_images, total_cost, created_at, updated_at) 
+                           VALUES (%s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
+                        (user_db_id, dataset_name, 0, 0))
+            dataset_id = cur.fetchone()[0]
+            print(f'📁 DATASET CREATED: New dataset_id={dataset_id}')
+        
+        # Update dataset totals
+        cur.execute('''UPDATE datasets SET 
+                       total_images = total_images + %s, 
+                       total_cost = total_cost + %s, 
+                       updated_at = NOW() 
+                       WHERE id = %s''', (image_count, cost, dataset_id))
+        
+        # Create batch record with dataset_id
+        cur.execute('''INSERT INTO batches (dataset_id, user_id, context, exclude_tags, image_count, cost, status, current_step, progress, created_at, updated_at) 
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
+                    (dataset_id, user_db_id, context_text, exclude_tags, image_count, cost, 'processing', 'ValidateAndSetup', 10))
         batch_id = cur.fetchone()[0]
         
         conn.commit()
@@ -66,6 +95,7 @@ def handler(event, context):
         return {
             'execution_id': execution_id,
             'batch_id': batch_id,
+            'dataset_id': dataset_id,
             'context': context_text,
             'exclude_tags': exclude_tags,
             'image_count': image_count,
