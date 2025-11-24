@@ -48,6 +48,7 @@ export default function Home() {
   const [zoomLevel, setZoomLevel] = useState(1)
   const [showAuth, setShowAuth] = useState(false)
   const [isLogin, setIsLogin] = useState(true)
+  const [isLoggedIn, setIsLoggedIn] = useState(false) // Mock auth state
 
   const handleImageSelect = (file: File) => {
     setUploadedImage(file)
@@ -107,6 +108,24 @@ export default function Home() {
     setImageBatches((prev) => prev.filter((batch) => batch.id !== batchId))
   }
 
+  const handleAccountClick = () => {
+    if (isLoggedIn) {
+      // User is logged in, navigate to account page
+      // In a real app, you'd use router.push('/account')
+      window.location.href = '/account'
+    } else {
+      // User not logged in, show auth modal
+      setShowAuth(true)
+    }
+  }
+
+  const handleAuthSuccess = () => {
+    // Mock successful login
+    setIsLoggedIn(true)
+    setShowAuth(false)
+    // In a real app, this would handle actual authentication
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <div className="container max-w-2xl mx-auto px-4 py-8 md:py-12">
@@ -122,18 +141,13 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowAuth(true)}>
-                Login
-              </Button>
               <Button variant="outline" size="icon" asChild>
                 <Link href="/gallery">
                   <ImageIcon className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button variant="outline" size="icon" asChild>
-                <Link href="/account">
-                  <User className="h-4 w-4" />
-                </Link>
+              <Button variant="outline" size="icon" onClick={handleAccountClick}>
+                <User className="h-4 w-4" />
               </Button>
               <ThemeToggle />
             </div>
@@ -518,7 +532,7 @@ export default function Home() {
                   </div>
                 )}
                 
-                <Button className="w-full">
+                <Button className="w-full" onClick={handleAuthSuccess}>
                   {isLogin ? "Login" : "Create Account"}
                 </Button>
                 
