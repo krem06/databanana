@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Download, Calendar, Image, ArrowLeft, Eye, EyeOff, CreditCard, Plus, X, ImageIcon } from "lucide-react"
+import { Download, Calendar, Image, ArrowLeft, Eye, EyeOff, CreditCard, Plus, X, ImageIcon, LogOut } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 
 interface BatchHistory {
   id: string
@@ -19,8 +20,10 @@ interface BatchHistory {
 }
 
 export default function Account() {
+  const { user, logout } = useAuth()
+  
   const [userInfo, setUserInfo] = useState({
-    email: "user@example.com",
+    email: user?.signInDetails?.loginId || "user@example.com",
     name: "John Doe",
     createdAt: "2024-01-15"
   })
@@ -34,6 +37,15 @@ export default function Account() {
   
   const [balance] = useState(25.50)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  
+  const handleLogout = async () => {
+    try {
+      await logout()
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
 
   const [batchHistory] = useState<BatchHistory[]>([
     {
@@ -89,7 +101,13 @@ export default function Account() {
           {/* User Information */}
           <Card>
             <CardHeader>
-              <CardTitle>User Information</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>User Information</CardTitle>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

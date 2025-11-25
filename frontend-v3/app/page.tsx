@@ -17,6 +17,8 @@ import { ImageUpload } from "@/components/image-upload"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Sparkles, Trash2, User, X, ImageIcon } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
+import { api } from "@/lib/api"
 
 interface GeneratedImage {
   id: string
@@ -48,7 +50,11 @@ export default function Home() {
   const [zoomLevel, setZoomLevel] = useState(1)
   const [showAuth, setShowAuth] = useState(false)
   const [isLogin, setIsLogin] = useState(true)
-  const [isLoggedIn, setIsLoggedIn] = useState(false) // Mock auth state
+  const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '' })
+  const [authError, setAuthError] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+  
+  const { isAuthenticated, login, signup } = useAuth()
 
   const handleImageSelect = (file: File) => {
     setUploadedImage(file)
@@ -109,21 +115,70 @@ export default function Home() {
   }
 
   const handleAccountClick = () => {
-    if (isLoggedIn) {
-      // User is logged in, navigate to account page
-      // In a real app, you'd use router.push('/account')
+    if (isAuthenticated) {
       window.location.href = '/account'
     } else {
-      // User not logged in, show auth modal
       setShowAuth(true)
     }
   }
 
-  const handleAuthSuccess = () => {
-    // Mock successful login
-    setIsLoggedIn(true)
-    setShowAuth(false)
-    // In a real app, this would handle actual authentication
+
+  const handleAuthSubmit = async () => {
+    setAuthError('')
+    
+    // Validation
+    if (!authForm.email || !authForm.password) {
+      setAuthError('Please fill in all fields')
+      return
+    }
+    
+    if (!isLogin) {
+      if (!authForm.confirmPassword) {
+        setAuthError('Please confirm your password')
+        return
+      }
+      if (authForm.password !== authForm.confirmPassword) {
+        setAuthError('Passwords do not match')
+        return
+      }
+      if (authForm.password.length < 8) {
+        setAuthError('Password must be at least 8 characters')
+        return
+      }
+    }
+
+    setAuthLoading(true)
+    
+    try {
+      if (isLogin) {
+        await login(authForm.email, authForm.password)
+      } else {
+        await signup(authForm.email, authForm.password)
+      }
+      setShowAuth(false)
+      setAuthForm({ email: '', password: '', confirmPassword: '' })
+    } catch (error: any) {
+      let errorMessage = 'Something went wrong. Please try again.'
+      
+      if (error?.message) {
+        const msg = error.message.toLowerCase()
+        if (msg.includes('incorrect') || msg.includes('invalid')) {
+          errorMessage = 'Invalid email or password'
+        } else if (msg.includes('user already exists') || msg.includes('already')) {
+          errorMessage = 'An account with this email already exists'
+        } else if (msg.includes('weak') || msg.includes('password')) {
+          errorMessage = 'Password must be at least 8 characters with numbers and letters'
+        } else if (msg.includes('email') || msg.includes('username')) {
+          errorMessage = 'Please enter a valid email address'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      setAuthError(errorMessage)
+    } finally {
+      setAuthLoading(false)
+    }
   }
 
   return (
@@ -515,32 +570,72 @@ export default function Home() {
               </div>
               
               <div className="space-y-4">
+                {authError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
+                    <p className="text-sm text-red-700 dark:text-red-300">{authError}</p>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Enter your email" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="Enter your email"
+                    value={authForm.email}
+                    onChange={(e) => setAuthForm(prev => ({...prev, email: e.target.value}))}
+                    disabled={authLoading}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="Enter your password" />
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    placeholder=""
+                    value={authForm.password}
+                    onChange={(e) => setAuthForm(prev => ({...prev, password: e.target.value}))}
+                    disabled={authLoading}
+                  />
+                  {!isLogin && (
+                    <p className="text-xs text-muted-foreground">
+                      Use 8+ characters with letters and numbers
+                    </p>
+                  )}
                 </div>
                 
                 {!isLogin && (
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input id="confirm-password" type="password" placeholder="Confirm your password" />
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input 
+                      id="confirmPassword" 
+                      type="password" 
+                      placeholder=""
+                      value={authForm.confirmPassword}
+                      onChange={(e) => setAuthForm(prev => ({...prev, confirmPassword: e.target.value}))}
+                      disabled={authLoading}
+                    />
                   </div>
                 )}
                 
-                <Button className="w-full" onClick={handleAuthSuccess}>
-                  {isLogin ? "Login" : "Create Account"}
+                <Button 
+                  className="w-full" 
+                  onClick={handleAuthSubmit}
+                  disabled={authLoading || !authForm.email || !authForm.password || (!isLogin && !authForm.confirmPassword)}
+                >
+                  {authLoading ? "Please wait..." : (isLogin ? "Login" : "Create Account")}
                 </Button>
                 
                 <div className="text-center text-sm text-muted-foreground">
                   {isLogin ? "Don't have an account? " : "Already have an account? "}
                   <button
                     type="button"
-                    onClick={() => setIsLogin(!isLogin)}
+                    onClick={() => {
+                      setIsLogin(!isLogin)
+                      setAuthError('')
+                      setAuthForm({ email: '', password: '', confirmPassword: '' })
+                    }}
                     className="text-primary underline hover:no-underline"
                   >
                     {isLogin ? "Sign up" : "Login"}
