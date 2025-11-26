@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Download, Calendar, Image, ArrowLeft, Eye, EyeOff, CreditCard, Plus, X, ImageIcon, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
+import { apiClient } from "@/lib/api"
 
 interface BatchHistory {
   id: string
@@ -20,12 +21,10 @@ interface BatchHistory {
 }
 
 export default function Account() {
-  const { user, logout } = useAuth()
+  const { user, logout, isAuthenticated } = useAuth()
   
   const [userInfo, setUserInfo] = useState({
-    email: user?.signInDetails?.loginId || "user@example.com",
-    name: "John Doe",
-    createdAt: "2024-01-15"
+    email: user?.signInDetails?.loginId || "user@example.com"
   })
   
   const [showPassword, setShowPassword] = useState(false)
@@ -35,8 +34,77 @@ export default function Account() {
     confirmPassword: ""
   })
   
-  const [balance] = useState(25.50)
+  const [balance, setBalance] = useState(0)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [realBatches, setRealBatches] = useState<BatchHistory[]>([])
+  const [processingPayment, setProcessingPayment] = useState(false)
+  const [paymentMessage, setPaymentMessage] = useState('')
+  
+  const handlePayment = async (amount: number) => {
+    setProcessingPayment(true)
+    setPaymentMessage('')
+    
+    try {
+      const data = await apiClient.createPayment(amount)
+      if ((data as any)?.checkout_url) {
+        window.location.href = (data as any).checkout_url
+      } else {
+        setPaymentMessage('Payment setup failed. Please try again.')
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error)
+      setPaymentMessage('Payment error: ' + error.message)
+    } finally {
+      setProcessingPayment(false)
+    }
+  }
+
+  // Handle payment success/cancel from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const paymentStatus = urlParams.get('payment')
+    
+    if (paymentStatus === 'success') {
+      setPaymentMessage('Payment successful! Your credits have been updated.')
+      // Refresh user data
+      fetchUserData()
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (paymentStatus === 'cancelled') {
+      setPaymentMessage('Payment was cancelled.')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+  
+  const fetchUserData = async () => {
+    if (isAuthenticated) {
+      try {
+        setLoading(true)
+        
+        // Fetch user info and credits
+        const userData = await apiClient.getUser()
+        setBalance((userData as any)?.credits || 0)
+        
+        if ((userData as any)?.email) {
+          setUserInfo({ email: (userData as any).email })
+        }
+        
+        // Fetch batch history
+        const batchData = await apiClient.getBatches()
+        setRealBatches(batchData)
+        
+      } catch (error) {
+        console.error('Failed to fetch user data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  // Fetch user data when authenticated
+  useEffect(() => {
+    fetchUserData()
+  }, [isAuthenticated])
   
   const handleLogout = async () => {
     try {
@@ -47,32 +115,16 @@ export default function Account() {
     }
   }
 
-  const [batchHistory] = useState<BatchHistory[]>([
+  const batchHistory = realBatches.length > 0 ? realBatches : [
     {
-      id: "batch-001",
-      date: "2024-11-06",
-      context: "Product photography for e-commerce",
-      template: "Realistic",
-      imageCount: 12,
-      zipUrl: "/downloads/batch-001.zip"
-    },
-    {
-      id: "batch-002", 
-      date: "2024-11-05",
-      context: "Abstract art for wall decoration",
-      template: "Abstract",
-      imageCount: 8,
-      zipUrl: "/downloads/batch-002.zip"
-    },
-    {
-      id: "batch-003",
-      date: "2024-11-04", 
-      context: "Portrait enhancement",
-      template: "Artistic",
-      imageCount: 6,
-      zipUrl: "/downloads/batch-003.zip"
+      id: "demo-batch",
+      date: new Date().toISOString().split('T')[0],
+      context: "No batches yet - start generating!",
+      template: "Demo",
+      imageCount: 0,
+      zipUrl: ""
     }
-  ])
+  ]
 
   return (
     <main className="min-h-screen bg-background">
@@ -110,6 +162,11 @@ export default function Account() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {loading && (
+                <div className="text-center text-muted-foreground">
+                  Loading user data...
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -121,24 +178,6 @@ export default function Account() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={userInfo.name}
-                  onChange={(e) => setUserInfo(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="created">Member Since</Label>
-                <Input
-                  id="created"
-                  value={userInfo.createdAt}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-              <div className="space-y-2">
-                <Button className="w-full">Update Profile</Button>
                 <Button 
                   variant="destructive" 
                   className="w-full" 
@@ -160,23 +199,62 @@ export default function Account() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {paymentMessage && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  paymentMessage.includes('successful') 
+                    ? 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-900'
+                    : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900'
+                }`}>
+                  {paymentMessage}
+                </div>
+              )}
+              
               <div className="text-center p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
                 <div className="text-3xl font-bold mb-1">${balance.toFixed(2)}</div>
                 <div className="text-sm text-muted-foreground">Available balance</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <Button variant="outline" size="sm">$5</Button>
-                <Button variant="outline" size="sm">$10</Button>
-                <Button variant="outline" size="sm">$20</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handlePayment(5)}
+                  disabled={processingPayment}
+                >
+                  $5
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handlePayment(10)}
+                  disabled={processingPayment}
+                >
+                  $10
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handlePayment(20)}
+                  disabled={processingPayment}
+                >
+                  $20
+                </Button>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline">$50</Button>
-                <Button variant="outline">$100</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handlePayment(50)}
+                  disabled={processingPayment}
+                >
+                  $50
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handlePayment(100)}
+                  disabled={processingPayment}
+                >
+                  $100
+                </Button>
               </div>
-              <Button className="w-full">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Funds
-              </Button>
             </CardContent>
           </Card>
         </div>
