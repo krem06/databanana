@@ -71,6 +71,9 @@ def handler(event, context):
             dataset_id = cur.fetchone()[0]
             print(f'📁 DATASET CREATED: New dataset_id={dataset_id}')
         
+        if not dataset_id:
+            raise ValueError(f'Failed to create/find dataset for user_id={user_db_id}')
+        
         # Update dataset totals
         cur.execute('''UPDATE datasets SET 
                        total_images = total_images + %s, 
@@ -79,6 +82,7 @@ def handler(event, context):
                        WHERE id = %s''', (image_count, cost, dataset_id))
         
         # Create batch record with dataset_id
+        print(f'📝 CREATING BATCH: dataset_id={dataset_id} user_id={user_db_id} context="{context_text}"')
         cur.execute('''INSERT INTO batches (dataset_id, user_id, context, exclude_tags, image_count, cost, status, current_step, progress, created_at, updated_at) 
                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
                     (dataset_id, user_db_id, context_text, exclude_tags, image_count, cost, 'processing', 'ValidateAndSetup', 10))
