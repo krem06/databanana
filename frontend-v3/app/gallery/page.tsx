@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,8 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Search, ArrowLeft, Calendar, Filter, X, Download, Grid3X3, Grid2X2 } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
+import { apiClient } from "@/lib/api"
 
 interface GeneratedImage {
   id: string
@@ -27,70 +29,64 @@ interface GeneratedImage {
 }
 
 export default function Gallery() {
+  const { isAuthenticated } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTemplate, setSelectedTemplate] = useState("")
   const [selectedDate, setSelectedDate] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "compact">("grid")
   const [zoomedImage, setZoomedImage] = useState<string | null>(null)
   const [zoomLevel, setZoomLevel] = useState(1)
-
-  // Mock data - replace with actual data fetching
-  const [images] = useState<GeneratedImage[]>([
-    {
-      id: "img-001",
-      url: "https://picsum.photos/400/300?random=1",
-      prompt: "Realistic: Product photography for e-commerce",
-      batchId: "batch-001",
-      date: "2024-11-06",
-      template: "Realistic",
-      context: "Product photography for e-commerce"
-    },
-    {
-      id: "img-002", 
-      url: "https://picsum.photos/400/300?random=2",
-      prompt: "Realistic: Product photography for e-commerce",
-      batchId: "batch-001",
-      date: "2024-11-06",
-      template: "Realistic",
-      context: "Product photography for e-commerce"
-    },
-    {
-      id: "img-003",
-      url: "https://picsum.photos/400/300?random=3",
-      prompt: "Abstract: Abstract art for wall decoration",
-      batchId: "batch-002",
-      date: "2024-11-05",
-      template: "Abstract",
-      context: "Abstract art for wall decoration"
-    },
-    {
-      id: "img-004",
-      url: "https://picsum.photos/400/300?random=4",
-      prompt: "Abstract: Abstract art for wall decoration",
-      batchId: "batch-002",
-      date: "2024-11-05",
-      template: "Abstract",
-      context: "Abstract art for wall decoration"
-    },
-    {
-      id: "img-005",
-      url: "https://picsum.photos/400/300?random=5",
-      prompt: "Artistic: Portrait enhancement",
-      batchId: "batch-003",
-      date: "2024-11-04",
-      template: "Artistic",
-      context: "Portrait enhancement"
-    },
-    {
-      id: "img-006",
-      url: "https://picsum.photos/400/300?random=6",
-      prompt: "Artistic: Portrait enhancement",
-      batchId: "batch-003",
-      date: "2024-11-04",
-      template: "Artistic",
-      context: "Portrait enhancement"
+  const [images, setImages] = useState<GeneratedImage[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  // Fetch real images from backend
+  useEffect(() => {
+    const fetchImages = async () => {
+      if (!isAuthenticated) {
+        setImages([])
+        setLoading(false)
+        return
+      }
+      
+      try {
+        setLoading(true)
+        const batches = await apiClient.getBatches()
+        console.log('Batches response:', batches)
+        
+        // Flatten batches into individual images
+        const allImages: GeneratedImage[] = []
+        batches.forEach((dataset: any) => {
+          dataset.batches.forEach((batch: any) => {
+            if (batch.images && batch.images.length > 0) {
+              batch.images.forEach((image: any) => {
+                allImages.push({
+                  id: image.id,
+                  url: image.url,
+                  prompt: image.prompt || batch.context,
+                  batchId: batch.id,
+                  date: batch.timestamp?.split('T')[0] || new Date().toISOString().split('T')[0],
+                  template: batch.context?.split(':')[0] || 'Unknown',
+                  context: batch.context
+                })
+              })
+            }
+          })
+        })
+        
+        console.log('Processed images:', allImages)
+        setImages(allImages)
+        
+      } catch (error) {
+        console.error('Failed to fetch images:', error)
+        setImages([])
+      } finally {
+        setLoading(false)
+      }
     }
-  ])
+    
+    fetchImages()
+  }, [isAuthenticated])
+
 
   // Filter images based on search and filters
   const filteredImages = images.filter((image) => {
@@ -224,7 +220,26 @@ export default function Gallery() {
         </Card>
 
         {/* Images Grid */}
-        {filteredImages.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <div className="text-muted-foreground">
+                <p>Loading your images...</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : !isAuthenticated ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <div className="text-muted-foreground">
+                <p className="mb-4">Please log in to view your gallery</p>
+                <Button asChild>
+                  <Link href="/">Go to Home</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredImages.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <div className="text-muted-foreground">
@@ -236,7 +251,12 @@ export default function Gallery() {
                     </Button>
                   </>
                 ) : (
-                  <p>No images found. Start generating some!</p>
+                  <>
+                    <p className="mb-4">No images found. Start generating some!</p>
+                    <Button asChild>
+                      <Link href="/">Start Generating</Link>
+                    </Button>
+                  </>
                 )}
               </div>
             </CardContent>
