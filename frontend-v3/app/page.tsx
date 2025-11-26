@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,7 +18,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Sparkles, Trash2, User, X, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
-import { api } from "@/lib/api"
+import { apiClient } from "@/lib/api"
 
 interface GeneratedImage {
   id: string
@@ -53,8 +53,28 @@ export default function Home() {
   const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '' })
   const [authError, setAuthError] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
+  const [userCredits, setUserCredits] = useState(0)
+  const [notification, setNotification] = useState<{type: 'success' | 'error', title: string, message: string} | null>(null)
   
   const { isAuthenticated, login, signup } = useAuth()
+  
+  // Fetch user credits when authenticated
+  useEffect(() => {
+    const fetchCredits = async () => {
+      if (isAuthenticated) {
+        try {
+          const userData = await apiClient.getUser()
+          setUserCredits(userData.credits || 0)
+        } catch (error) {
+          console.error('Failed to fetch credits:', error)
+        }
+      } else {
+        setUserCredits(0)
+      }
+    }
+    
+    fetchCredits()
+  }, [isAuthenticated])
 
   const handleImageSelect = (file: File) => {
     setUploadedImage(file)
@@ -71,43 +91,86 @@ export default function Home() {
   }
 
   const handleGenerate = async () => {
-    if (!context || !template || !acceptedTerms) return
+    if (!context || !template || !acceptedTerms || !isAuthenticated) return
+
+    // Calculate cost and check credits
+    const cost = visualCount * (exclusiveOwnership ? 0.20 : 0.10)
+    if (userCredits < cost) {
+      setNotification({
+        type: 'error',
+        title: 'Insufficient Credits',
+        message: `You need $${cost.toFixed(2)} but have $${userCredits.toFixed(2)}. Please add funds to your account.`
+      })
+      return
+    }
 
     setIsGenerating(true)
-    setProgress(0)
+    setProgress(10)
 
-    // Simulate progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 300)
-
-    // Simulate generation (replace with actual API call)
-    setTimeout(() => {
-      const batchId = `batch-${Date.now()}`
-      const newImages: GeneratedImage[] = Array.from({ length: visualCount }, (_, i) => ({
-        id: `${batchId}-img-${i}`,
-        url: uploadedImage ? previewUrl || `https://picsum.photos/400/300?random=${Date.now()}-${i}` : `https://picsum.photos/400/300?random=${Date.now()}-${i}`,
-        prompt: `${template}: ${context}`,
-      }))
-      
-      const newBatch: ImageBatch = {
-        id: batchId,
-        date: new Date().toISOString().split('T')[0],
+    try {
+      // Start image generation (backend will deduct credits)
+      const generateResponse = await apiClient.generateBatch(
         context,
-        template,
-        images: newImages
+        '', // excludeTags - empty for now
+        visualCount
+      )
+      
+      setProgress(30)
+      
+      // Immediately refresh credits (backend deducted them)
+      try {
+        const updatedUserData = await apiClient.getUser()
+        setUserCredits((updatedUserData as any)?.credits || 0)
+      } catch (error) {
+        console.error('Failed to refresh credits:', error)
       }
       
-      setImageBatches((prev) => [newBatch, ...prev])
+      setProgress(60)
+      
+      const executionId = (generateResponse as any)?.execution_id
+      
+      if (executionId) {
+        // Show processing message
+        setNotification({
+          type: 'success',
+          title: 'Generation Started!',
+          message: 'Your images are being processed. Check back in a few minutes or visit your account page to see completed batches.'
+        })
+        
+        // Optional: Poll for completion (simplified)
+        setProgress(100)
+        
+        // Reset form
+        setContext('')
+        setTemplate('')
+        setUploadedImage(null)
+        setPreviewUrl(null)
+        
+      } else {
+        throw new Error('Generation failed to start')
+      }
+      
+    } catch (error: any) {
+      console.error('Generation failed:', error)
+      
+      // Check if it's insufficient credits error from backend
+      if (error?.status === 402 || error?.message?.includes('Insufficient')) {
+        setNotification({
+          type: 'error',
+          title: 'Insufficient Credits',
+          message: 'Please add funds to your account.'
+        })
+      } else {
+        setNotification({
+          type: 'error',
+          title: 'Generation Failed',
+          message: error?.message || 'Failed to generate images. Please try again.'
+        })
+      }
+    } finally {
       setIsGenerating(false)
-      setProgress(0)
-    }, 3000)
+      setTimeout(() => setProgress(0), 1000)
+    }
   }
 
   const handleDeleteBatch = (batchId: string) => {
@@ -204,6 +267,11 @@ export default function Home() {
               <Button variant="outline" size="icon" onClick={handleAccountClick}>
                 <User className="h-4 w-4" />
               </Button>
+              {isAuthenticated && (
+                <div className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-md border border-primary/20">
+                  ${userCredits.toFixed(2)}
+                </div>
+              )}
               <ThemeToggle />
             </div>
           </div>
@@ -375,11 +443,15 @@ export default function Home() {
             <Button
               className="w-full"
               size="lg"
-              onClick={handleGenerate}
-              disabled={!context || !template || !acceptedTerms || isGenerating}
+              onClick={isAuthenticated ? handleGenerate : () => setShowAuth(true)}
+              disabled={isAuthenticated ? (!context || !template || !acceptedTerms || isGenerating || userCredits < (visualCount * (exclusiveOwnership ? 0.20 : 0.10))) : false}
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              {isGenerating ? "Generating..." : "Generate"}
+              {isGenerating ? "Generating..." : 
+               !isAuthenticated ? "Login to Generate" :
+               userCredits < (visualCount * (exclusiveOwnership ? 0.20 : 0.10)) ? 
+               `Need $${((visualCount * (exclusiveOwnership ? 0.20 : 0.10)) - userCredits).toFixed(2)} more` :
+               "Generate"}
             </Button>
           </CardContent>
         </Card>
@@ -641,6 +713,32 @@ export default function Home() {
                     {isLogin ? "Sign up" : "Login"}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notification Modal */}
+        {notification && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setNotification(null)}>
+            <div className="bg-background rounded-lg p-6 max-w-md m-4 border" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <h3 className={`text-lg font-semibold ${
+                    notification.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                  }`}>
+                    {notification.title}
+                  </h3>
+                  <p className="text-muted-foreground mt-2">{notification.message}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setNotification(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button onClick={() => setNotification(null)}>
+                  OK
+                </Button>
               </div>
             </div>
           </div>
