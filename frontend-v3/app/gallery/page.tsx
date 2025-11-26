@@ -28,10 +28,10 @@ interface GeneratedImage {
   context: string
 }
 
+
 export default function Gallery() {
   const { isAuthenticated } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedTemplate, setSelectedTemplate] = useState("")
   const [selectedDate, setSelectedDate] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "compact">("grid")
   const [zoomedImage, setZoomedImage] = useState<string | null>(null)
@@ -65,7 +65,7 @@ export default function Gallery() {
                   prompt: image.prompt || batch.context,
                   batchId: batch.id,
                   date: batch.timestamp?.split('T')[0] || new Date().toISOString().split('T')[0],
-                  template: batch.context?.split(':')[0] || 'Unknown',
+                  template: '',
                   context: batch.context
                 })
               })
@@ -92,23 +92,20 @@ export default function Gallery() {
   const filteredImages = images.filter((image) => {
     const matchesSearch = image.context.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          image.prompt.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesTemplate = !selectedTemplate || selectedTemplate === "all" || image.template === selectedTemplate
     const matchesDate = !selectedDate || selectedDate === "all" || image.date === selectedDate
     
-    return matchesSearch && matchesTemplate && matchesDate
+    return matchesSearch && matchesDate
   })
 
   // Get unique values for filters
-  const uniqueTemplates = Array.from(new Set(images.map(img => img.template)))
   const uniqueDates = Array.from(new Set(images.map(img => img.date))).sort().reverse()
 
   const clearFilters = () => {
     setSearchQuery("")
-    setSelectedTemplate("")
     setSelectedDate("")
   }
 
-  const hasActiveFilters = searchQuery || (selectedTemplate && selectedTemplate !== "all") || (selectedDate && selectedDate !== "all")
+  const hasActiveFilters = searchQuery || (selectedDate && selectedDate !== "all")
 
   return (
     <main className="min-h-screen bg-background">
@@ -164,7 +161,7 @@ export default function Gallery() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="search">Search</Label>
                 <div className="relative">
@@ -177,23 +174,6 @@ export default function Gallery() {
                     className="pl-10"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="template">Template</Label>
-                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                  <SelectTrigger id="template">
-                    <SelectValue placeholder="All templates" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All templates</SelectItem>
-                    {uniqueTemplates.map((template) => (
-                      <SelectItem key={template} value={template}>
-                        {template}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -287,7 +267,7 @@ export default function Gallery() {
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{image.context}</p>
-                            <p className="text-xs text-gray-300 truncate">{image.template} • {image.date}</p>
+                            <p className="text-xs text-gray-300 truncate">{image.date}</p>
                           </div>
                           <Button
                             size="icon"

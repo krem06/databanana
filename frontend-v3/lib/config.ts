@@ -17,3 +17,4 @@ export const awsConfig = {
 }
 
 export const apiName = 'databanana'
+export const wsUrl = 'wss://xihotdtz5j.execute-api.eu-west-1.amazonaws.com/prod'

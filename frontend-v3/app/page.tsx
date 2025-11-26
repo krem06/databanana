@@ -19,6 +19,7 @@ import { Sparkles, Trash2, User, X, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { apiClient } from "@/lib/api"
+import { useProgress } from "@/hooks/useProgress"
 
 interface GeneratedImage {
   id: string
@@ -55,26 +56,51 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(false)
   const [userCredits, setUserCredits] = useState(0)
   const [notification, setNotification] = useState<{type: 'success' | 'error', title: string, message: string} | null>(null)
+  const [activeExecution, setActiveExecution] = useState<string | null>(null)
   
   const { isAuthenticated, login, signup } = useAuth()
+  const progressData = useProgress(activeExecution)
   
-  // Fetch user credits when authenticated
+  // Clear progress and fetch results when WebSocket indicates completion
   useEffect(() => {
-    const fetchCredits = async () => {
+    if (progressData?.status === 'completed') {
+      setTimeout(async () => {
+        setActiveExecution(null)
+        setIsGenerating(false)
+        // Fetch updated batches to show new results
+        try {
+          const batchData = await apiClient.getBatches()
+          setImageBatches(Array.isArray(batchData) ? batchData : [])
+        } catch (error) {
+          console.error('Failed to fetch batches after completion:', error)
+        }
+      }, 2000)
+    }
+  }, [progressData?.status])
+
+  // Fetch user credits and batches when authenticated
+  useEffect(() => {
+    const fetchData = async () => {
       if (isAuthenticated) {
         try {
           const userData = await apiClient.getUser()
           setUserCredits(userData.credits || 0)
+          
+          // Also fetch existing batches
+          const batchData = await apiClient.getBatches()
+          setImageBatches(Array.isArray(batchData) ? batchData : [])
         } catch (error) {
-          console.error('Failed to fetch credits:', error)
+          console.error('Failed to fetch user data:', error)
         }
       } else {
         setUserCredits(0)
+        setImageBatches([])
       }
     }
     
-    fetchCredits()
+    fetchData()
   }, [isAuthenticated])
+
 
   const handleImageSelect = (file: File) => {
     setUploadedImage(file)
@@ -105,7 +131,6 @@ export default function Home() {
     }
 
     setIsGenerating(true)
-    setProgress(10)
 
     try {
       // Start image generation (backend will deduct credits)
@@ -115,8 +140,6 @@ export default function Home() {
         visualCount
       )
       
-      setProgress(30)
-      
       // Immediately refresh credits (backend deducted them)
       try {
         const updatedUserData = await apiClient.getUser()
@@ -125,20 +148,13 @@ export default function Home() {
         console.error('Failed to refresh credits:', error)
       }
       
-      setProgress(60)
-      
       const executionId = (generateResponse as any)?.execution_id
       
       if (executionId) {
-        // Show processing message
-        setNotification({
-          type: 'success',
-          title: 'Generation Started!',
-          message: 'Your images are being processed. Check back in a few minutes or visit your account page to see completed batches.'
-        })
+        // Start tracking WebSocket progress
+        setActiveExecution(executionId)
         
-        // Optional: Poll for completion (simplified)
-        setProgress(100)
+        // No notification popup - just show progress
         
         // Reset form
         setContext('')
@@ -167,9 +183,9 @@ export default function Home() {
           message: error?.message || 'Failed to generate images. Please try again.'
         })
       }
-    } finally {
+      
       setIsGenerating(false)
-      setTimeout(() => setProgress(0), 1000)
+      setActiveExecution(null)
     }
   }
 
@@ -457,22 +473,29 @@ export default function Home() {
         </Card>
 
         {/* Progress Bar */}
-        {isGenerating && (
+        {(isGenerating || progressData) && (
           <Card className="mb-6">
             <CardContent className="pt-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Generating</span>
-                  <span className="font-medium">{progress}%</span>
+                  <span className="text-muted-foreground">
+                    {progressData?.step || 'Generating'}
+                  </span>
+                  <span className="font-medium">
+                    {progressData?.progress || progress}%
+                  </span>
                 </div>
-                <Progress value={progress} className="w-full" />
+                <Progress value={progressData?.progress || progress} className="w-full" />
+                <div className="text-xs text-muted-foreground">
+                  {progressData?.message || 'Processing...'}
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Generated Image Batches */}
-        {imageBatches.length > 0 && (
+        {imageBatches && imageBatches.length > 0 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Generated Batches</h2>
             {imageBatches.map((batch) => (
@@ -486,7 +509,7 @@ export default function Home() {
                         <span>•</span>
                         <span>{batch.template}</span>
                         <span>•</span>
-                        <span>{batch.images.length} images</span>
+                        <span>{batch.images?.length || 0} images</span>
                       </div>
                     </div>
                     <Button
@@ -499,7 +522,7 @@ export default function Home() {
                     </Button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {batch.images.map((image) => (
+                    {(batch.images || []).map((image) => (
                       <div 
                         key={image.id} 
                         className="relative group cursor-pointer"

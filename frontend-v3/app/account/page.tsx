@@ -15,9 +15,8 @@ interface BatchHistory {
   id: string
   date: string
   context: string
-  template: string
   imageCount: number
-  zipUrl: string
+  datasetName: string
 }
 
 export default function Account() {
@@ -89,9 +88,27 @@ export default function Account() {
           setUserInfo({ email: (userData as any).email })
         }
         
-        // Fetch batch history
+        // Fetch batch history and flatten to individual batches
         const batchData = await apiClient.getBatches()
-        setRealBatches(batchData)
+        const flattenedBatches: BatchHistory[] = []
+        
+        if (Array.isArray(batchData)) {
+          batchData.forEach((dataset: any) => {
+            if (dataset.batches && Array.isArray(dataset.batches)) {
+              dataset.batches.forEach((batch: any) => {
+                flattenedBatches.push({
+                  id: batch.id,
+                  date: batch.timestamp?.split('T')[0] || new Date().toISOString().split('T')[0],
+                  context: batch.context || 'No context',
+                  imageCount: batch.images?.length || 0,
+                  datasetName: dataset.name || 'Unknown Dataset'
+                })
+              })
+            }
+          })
+        }
+        
+        setRealBatches(flattenedBatches)
         
       } catch (error) {
         console.error('Failed to fetch user data:', error)
@@ -115,16 +132,7 @@ export default function Account() {
     }
   }
 
-  const batchHistory = realBatches.length > 0 ? realBatches : [
-    {
-      id: "demo-batch",
-      date: new Date().toISOString().split('T')[0],
-      context: "No batches yet - start generating!",
-      template: "Demo",
-      imageCount: 0,
-      zipUrl: ""
-    }
-  ]
+  const batchHistory = realBatches
 
   return (
     <main className="min-h-screen bg-background">
@@ -309,52 +317,39 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* Batch History */}
+        {/* Generation History */}
         <Card className="mt-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Generation History</CardTitle>
-              <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{batchHistory.length} batches</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Image className="w-4 h-4" />
-                  <span>{batchHistory.reduce((sum, batch) => sum + batch.imageCount, 0)} images</span>
-                </div>
-              </div>
-            </div>
+            <CardTitle>Generation History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {batchHistory.map((batch) => (
-                <div
-                  key={batch.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{batch.date}</span>
-                      <span className="text-xs bg-secondary px-2 py-1 rounded">
-                        {batch.template}
-                      </span>
+            {batchHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No generations yet. <Link href="/" className="text-primary underline">Start generating!</Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {batchHistory.map((batch) => (
+                  <div
+                    key={batch.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <h4 className="font-medium">{batch.context}</h4>
+                      <div className="text-sm text-muted-foreground">
+                        {batch.date} • {batch.imageCount} images • {batch.datasetName}
+                      </div>
                     </div>
-                    <h4 className="font-medium mb-1">{batch.context}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {batch.imageCount} images generated
-                    </p>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/gallery">
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        View
+                      </Link>
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={batch.zipUrl} download>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </a>
-                  </Button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
