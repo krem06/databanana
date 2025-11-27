@@ -1,6 +1,16 @@
 import { get, post } from 'aws-amplify/api'
-import { apiName, awsConfig } from './config'
+import { apiName, awsConfig, cdnDomain } from './config'
 import { getAuthHeaders } from './auth'
+
+// Helper function to get proper image URL
+function getImageUrl(s3Key: string): string {
+  // If it's a public image (starts with 'public/'), use CloudFront
+  if (s3Key.startsWith('public/')) {
+    return `${cdnDomain}/${s3Key}`
+  }
+  // For private images, we'll need to get signed URLs
+  return s3Key
+}
 
 export const apiClient = {
   // User endpoints
@@ -31,7 +41,61 @@ export const apiClient = {
       })
       const data = await response.response
       const actualData = await data.body.json()
-      return Array.isArray(actualData) ? actualData : []
+      
+      if (!Array.isArray(actualData)) return []
+      
+      // Process image URLs and get signed URLs for private images
+      const processedData = await Promise.all(actualData.map(async (dataset: any) => {
+        const processedBatches = await Promise.all(dataset.batches.map(async (batch: any) => {
+          if (!batch.images || !Array.isArray(batch.images)) return batch
+          
+          // Separate public and private images
+          const publicImages: any[] = []
+          const privateImageKeys: string[] = []
+          
+          batch.images.forEach((image: any) => {
+            if (image.url.startsWith('public/')) {
+              publicImages.push({
+                ...image,
+                url: getImageUrl(image.url)
+              })
+            } else {
+              privateImageKeys.push(image.url)
+            }
+          })
+          
+          // Get signed URLs for private images if any
+          let privateImages: any[] = []
+          if (privateImageKeys.length > 0) {
+            try {
+              const signedUrls = await this.getSignedUrls(privateImageKeys)
+              privateImages = batch.images
+                .filter((img: any) => privateImageKeys.includes(img.url))
+                .map((img: any) => ({
+                  ...img,
+                  url: signedUrls[img.url] || img.url
+                }))
+            } catch (error) {
+              console.error('Failed to get signed URLs:', error)
+              // Fallback to original URLs
+              privateImages = batch.images
+                .filter((img: any) => privateImageKeys.includes(img.url))
+            }
+          }
+          
+          return {
+            ...batch,
+            images: [...publicImages, ...privateImages]
+          }
+        }))
+        
+        return {
+          ...dataset,
+          batches: processedBatches
+        }
+      }))
+      
+      return processedData
     } catch (error) {
       console.error('Get Batches Error:', error)
       throw error

@@ -18,3 +18,4 @@ export const awsConfig = {
 
 export const apiName = 'databanana'
 export const wsUrl = 'wss://xihotdtz5j.execute-api.eu-west-1.amazonaws.com/prod'
+export const cdnDomain = 'https://d3rqz5kqzn1v1g.cloudfront.net'

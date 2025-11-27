@@ -34,6 +34,10 @@ Globals:
           UserPoolArn: !GetAtt UserPool.Arn
 
 Parameters:
+  DomainName:
+    Type: String
+    Description: Your domain name (e.g., yourdomain.com) for CloudFront referer restriction
+    Default: "localhost:5173"
   PrivateImageExpirationDays:
     Type: Number
     Default: 30
@@ -129,17 +133,57 @@ Resources:
         IgnorePublicAcls: false
         RestrictPublicBuckets: false
 
+  # CloudFront Origin Access Control
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-OAC"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # CloudFront Distribution
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt ImageBucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !GetAtt OriginAccessControl.Id
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # AWS Managed CachingOptimized
+        PriceClass: PriceClass_100
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: none
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
   ImageBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref ImageBucket
       PolicyDocument:
         Statement:
-          - Sid: PublicReadForGeneratedImages
+          - Sid: AllowCloudFrontServicePrincipal
             Effect: Allow
-            Principal: "*"
+            Principal:
+              Service: cloudfront.amazonaws.com
             Action: s3:GetObject
             Resource: !Sub "${ImageBucket}/generated/*"
+            Condition:
+              StringEquals:
+                "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   # Database Lambda Functions
   UserFunction:
@@ -282,6 +326,7 @@ Resources:
       Environment:
         Variables:
           BUCKET_NAME: !Ref ImageBucket
+          CLOUDFRONT_DOMAIN: !GetAtt CloudFrontDistribution.DomainName
       Policies:
         - Statement:
           - Effect: Allow
@@ -890,4 +935,12 @@ Outputs:
   WebSocketApiUrl:
     Description: "WebSocket API URL for real-time updates"
     Value: !Sub "wss://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+
+  CloudFrontDomainName:
+    Description: "CloudFront distribution domain name for images"
+    Value: !GetAtt CloudFrontDistribution.DomainName
+
+  CloudFrontDistributionId:
+    Description: "CloudFront distribution ID"
+    Value: !Ref CloudFrontDistribution
   
