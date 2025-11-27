@@ -37,7 +37,7 @@ def get_datasets_with_batches(cognito_user_id):
     # Get datasets with their batches and images
     cur.execute('''
         SELECT d.id as dataset_id, d.name as dataset_name, d.created_at as dataset_created,
-               b.id as batch_id, b.context, b.exclude_tags, b.cost, b.created_at as batch_created,
+               b.id as batch_id, b.context, b.template, b.exclude_tags, b.cost, b.created_at as batch_created,
                i.id as image_id, i.url, i.prompt, i.validated, i.rejected
         FROM datasets d
         LEFT JOIN batches b ON d.id = b.dataset_id
@@ -49,7 +49,7 @@ def get_datasets_with_batches(cognito_user_id):
     # Group by datasets containing batches containing images
     datasets = {}
     for row in cur.fetchall():
-        dataset_id, dataset_name, dataset_created, batch_id, context, exclude_tags, cost, batch_created, image_id, url, prompt, validated, rejected = row
+        dataset_id, dataset_name, dataset_created, batch_id, context, template, exclude_tags, cost, batch_created, image_id, url, prompt, validated, rejected = row
         
         if dataset_id not in datasets:
             datasets[dataset_id] = {
@@ -63,6 +63,7 @@ def get_datasets_with_batches(cognito_user_id):
             datasets[dataset_id]['batches'][batch_id] = {
                 'id': batch_id,
                 'context': context,
+                'template': template,
                 'excludeTags': exclude_tags or '',
                 'cost': float(cost),
                 'timestamp': batch_created.isoformat(),

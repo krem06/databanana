@@ -25,8 +25,11 @@ def handler(event, context):
         print(f'Event: {event}')
         body = event['body'] if isinstance(event['body'], dict) else json.loads(event['body'])
         context_text = body['context']
+        template = body.get('template', '')
         exclude_tags = body.get('exclude_tags', '')
         image_count = body.get('image_count', 10)
+        exclusive_ownership = body.get('exclusive_ownership', False)
+        reference_images = body.get('reference_images', [])
         cognito_user_id = get_cognito_user_id(event)
         print(f'🚀 GENERATE START: context="{context_text[:50]}..." images={image_count} user={cognito_user_id}')
         
@@ -69,8 +72,11 @@ def handler(event, context):
         
         workflow_input = {
             'context': context_text,
+            'template': template,
             'exclude_tags': exclude_tags,
             'image_count': image_count,
+            'exclusive_ownership': exclusive_ownership,
+            'reference_images': reference_images,
             'cognito_user_id': cognito_user_id
         }
         

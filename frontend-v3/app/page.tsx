@@ -38,8 +38,7 @@ interface ImageBatch {
 export default function Home() {
   const [context, setContext] = useState("")
   const [template, setTemplate] = useState("")
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [referenceImages, setReferenceImages] = useState<File[]>([])
   const [progress, setProgress] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
   const [imageBatches, setImageBatches] = useState<ImageBatch[]>([])
@@ -102,18 +101,8 @@ export default function Home() {
   }, [isAuthenticated])
 
 
-  const handleImageSelect = (file: File) => {
-    setUploadedImage(file)
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      setPreviewUrl(e.target?.result as string)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleRemoveImage = () => {
-    setUploadedImage(null)
-    setPreviewUrl(null)
+  const handleImagesChange = (files: File[]) => {
+    setReferenceImages(files)
   }
 
   const handleGenerate = async () => {
@@ -136,8 +125,11 @@ export default function Home() {
       // Start image generation (backend will deduct credits)
       const generateResponse = await apiClient.generateBatch(
         context,
+        template,
         '', // excludeTags - empty for now
-        visualCount
+        visualCount,
+        exclusiveOwnership,
+        referenceImages
       )
       
       // Immediately refresh credits (backend deducted them)
@@ -159,8 +151,7 @@ export default function Home() {
         // Reset form
         setContext('')
         setTemplate('')
-        setUploadedImage(null)
-        setPreviewUrl(null)
+        setReferenceImages([])
         
       } else {
         throw new Error('Generation failed to start')
@@ -339,29 +330,17 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Image Upload */}
+            {/* Reference Images */}
             <div className="space-y-2">
-              <Label>Upload Image</Label>
-              {previewUrl ? (
-                <div className="relative">
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2"
-                    onClick={handleRemoveImage}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <ImageUpload onImageSelect={handleImageSelect} />
-              )}
+              <Label>Reference Images (Optional)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Upload up to 14 reference images to provide visual context for your generation
+              </p>
+              <ImageUpload 
+                onImagesChange={handleImagesChange} 
+                existingImages={referenceImages}
+                maxFiles={14}
+              />
             </div>
 
             {/* Ownership Options */}

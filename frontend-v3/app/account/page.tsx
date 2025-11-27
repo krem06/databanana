@@ -15,6 +15,7 @@ interface BatchHistory {
   id: string
   date: string
   context: string
+  template: string
   imageCount: number
   datasetName: string
 }
@@ -100,6 +101,7 @@ export default function Account() {
                   id: batch.id,
                   date: batch.timestamp?.split('T')[0] || new Date().toISOString().split('T')[0],
                   context: batch.context || 'No context',
+                  template: batch.template || 'Unknown',
                   imageCount: batch.images?.length || 0,
                   datasetName: dataset.name || 'Unknown Dataset'
                 })
@@ -337,7 +339,7 @@ export default function Account() {
                     <div className="flex-1">
                       <h4 className="font-medium">{batch.context}</h4>
                       <div className="text-sm text-muted-foreground">
-                        {batch.date} • {batch.imageCount} images • {batch.datasetName}
+                        {batch.template} • {batch.date} • {batch.imageCount} images
                       </div>
                     </div>
                     <Button variant="outline" size="sm" asChild>

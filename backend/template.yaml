@@ -34,6 +34,18 @@ Globals:
           UserPoolArn: !GetAtt UserPool.Arn
 
 Parameters:
+  PrivateImageExpirationDays:
+    Type: Number
+    Default: 30
+    Description: Number of days before private images are deleted
+    MinValue: 1
+    MaxValue: 365
+  ReferenceImageExpirationDays:
+    Type: Number
+    Default: 7
+    Description: Number of days before reference images are deleted
+    MinValue: 1
+    MaxValue: 90
   DatabaseHost:
     Type: String
     Description: PostgreSQL database host
@@ -99,6 +111,35 @@ Resources:
           - AllowedHeaders: ["*"]
             AllowedMethods: [GET, PUT, POST, DELETE]
             AllowedOrigins: ["*"]
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeletePrivateImages
+            Status: Enabled
+            Filter:
+              Prefix: private/
+            ExpirationInDays: !Ref PrivateImageExpirationDays
+          - Id: DeleteReferenceImages
+            Status: Enabled
+            Filter:
+              Prefix: reference-images/
+            ExpirationInDays: !Ref ReferenceImageExpirationDays
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  ImageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadForGeneratedImages
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${ImageBucket}/generated/*"
 
   # Database Lambda Functions
   UserFunction:
@@ -199,6 +240,66 @@ Resources:
           Type: Api
           Properties:
             Path: /generate
+            Method: options
+
+  UploadUrlsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: upload_urls.handler
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageBucket
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource: !Sub "${ImageBucket}/*"
+      Events:
+        UploadUrls:
+          Type: Api
+          Properties:
+            Path: /upload-urls
+            Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UploadUrlsOptions:
+          Type: Api
+          Properties:
+            Path: /upload-urls
+            Method: options
+
+  SignedUrlsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: signed_urls.handler
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageBucket
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource: !Sub "${ImageBucket}/*"
+      Events:
+        SignedUrls:
+          Type: Api
+          Properties:
+            Path: /signed-urls
+            Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SignedUrlsOptions:
+          Type: Api
+          Properties:
+            Path: /signed-urls
             Method: options
 
 

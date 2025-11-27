@@ -10,8 +10,10 @@ def handler(event, context):
     try:
         # Extract input from Step Functions
         context_text = event['context']
+        template = event.get('template', '')
         exclude_tags = event.get('exclude_tags', '')
         image_count = event.get('image_count', 10)
+        exclusive_ownership = event.get('exclusive_ownership', False)
         cognito_user_id = event['cognito_user_id']
         execution_id = event.get('execution_id', 'unknown')
         
@@ -83,9 +85,9 @@ def handler(event, context):
         
         # Create batch record with dataset_id
         print(f'📝 CREATING BATCH: dataset_id={dataset_id} user_id={user_db_id} context="{context_text}"')
-        cur.execute('''INSERT INTO batches (dataset_id, user_id, context, exclude_tags, image_count, cost, status, current_step, progress, created_at, updated_at) 
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
-                    (dataset_id, user_db_id, context_text, exclude_tags, image_count, cost, 'processing', 'ValidateAndSetup', 10))
+        cur.execute('''INSERT INTO batches (dataset_id, user_id, context, template, exclude_tags, image_count, cost, exclusive_ownership, status, current_step, progress, created_at, updated_at) 
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING id''',
+                    (dataset_id, user_db_id, context_text, template, exclude_tags, image_count, cost, exclusive_ownership, 'processing', 'ValidateAndSetup', 10))
         batch_id = cur.fetchone()[0]
         
         conn.commit()

@@ -25,9 +25,11 @@ CREATE TABLE batches (
     dataset_id INTEGER REFERENCES datasets(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id),
     context VARCHAR(80) NOT NULL,
+    template VARCHAR(50),
     exclude_tags TEXT,
     image_count INTEGER NOT NULL,
     cost DECIMAL(10,2) NOT NULL,
+    exclusive_ownership BOOLEAN DEFAULT false,
     status VARCHAR(20) DEFAULT 'processing',
     gemini_batch_id VARCHAR(255),
     error_message TEXT,
@@ -55,6 +57,16 @@ CREATE TABLE images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Reference images uploaded by users for generation context
+CREATE TABLE reference_images (
+    id SERIAL PRIMARY KEY,
+    batch_id INTEGER REFERENCES batches(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    s3_url TEXT NOT NULL,
+    file_size INTEGER,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- WebSocket connections table (if using PostgreSQL instead of DynamoDB)
 CREATE TABLE IF NOT EXISTS websocket_connections (
     connection_id VARCHAR(255) PRIMARY KEY,
@@ -75,6 +87,7 @@ CREATE INDEX idx_images_batch_created ON images (batch_id, created_at);
 CREATE INDEX idx_images_dataset_created ON images (dataset_id, created_at);
 CREATE INDEX idx_images_validated ON images (dataset_id, validated) WHERE validated = true;
 CREATE INDEX idx_images_rejected ON images (dataset_id, rejected) WHERE rejected = true;
+CREATE INDEX idx_reference_images_batch ON reference_images (batch_id);
 
 -- Additional indexes from migrations
 CREATE INDEX idx_batches_status ON batches(status);
